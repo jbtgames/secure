@@ -870,6 +870,21 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject, getBlob } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+        // Make Firebase functions available globally
+        window.initializeApp = initializeApp;
+        window.getStorage = getStorage;
+        window.ref = ref;
+        window.uploadBytes = uploadBytes;
+        window.getDownloadURL = getDownloadURL;
+        window.getBlob = getBlob;
+        window.deleteObject = deleteObject;
+        window.getFirestore = getFirestore;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDocs = getDocs;
+        window.collection = collection;
+        window.deleteDoc = deleteDoc;
+
         // Firebase Configuration
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyDU04h1-gksIzEmKzUlGsni_xYWWrxZp3g",
@@ -879,6 +894,8 @@
             messagingSenderId: "685240750649",
             appId: "1:685240750649:web:bfebdef7b84f4bd6dc73e8"
         };
+
+        window.FIREBASE_CONFIG = FIREBASE_CONFIG;
 
         // Global state
         window.app = null;
@@ -890,28 +907,6 @@
         window.folders = ['All Photos'];
         window.currentPhotoId = null;
 
-        // Check if vault is initialized
-        const isInitialized = localStorage.getItem('vaultInitialized') === 'true';
-
-        if (isInitialized) {
-            document.getElementById('authTitle').textContent = 'Welcome Back';
-            document.getElementById('authSubtitle').textContent = 'Enter your password to unlock';
-            
-            // Check for biometric
-            (async () => {
-                const hasBiometric = localStorage.getItem('biometricAuth');
-                const isAvailable = await isBiometricAvailable();
-                if (hasBiometric && isAvailable) {
-                    document.getElementById('biometricBtn').classList.remove('hidden');
-                }
-            })();
-        } else {
-            document.getElementById('authTitle').textContent = 'Create Vault';
-            document.getElementById('authSubtitle').textContent = 'Choose a secure password';
-            document.getElementById('passwordForm').classList.add('hidden');
-            document.getElementById('setupForm').classList.remove('hidden');
-        }
-
         // Initialize with password
         window.initializeWithPassword = async function() {
             const password = document.getElementById('setupPassword').value;
@@ -921,9 +916,9 @@
             }
 
             try {
-                window.app = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.app);
-                window.db = getFirestore(window.app);
+                window.app = window.initializeApp(window.FIREBASE_CONFIG);
+                window.storage = window.window.getStorage(window.app);
+                window.db = window.window.getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
 
                 const passwordHash = await hashPassword(password);
@@ -955,6 +950,17 @@
             }
         };
 
+        window.enableBiometricConfirm = async function(password) {
+            await setupBiometric(password);
+            document.querySelector('.modal.active').remove();
+            finalizeVaultSetup();
+        };
+
+        window.finalizeVaultSetup = function() {
+            showVault();
+            loadPhotos();
+        };
+
         // Login
         window.login = async function() {
             const password = document.getElementById('password').value;
@@ -972,9 +978,9 @@
                     return;
                 }
 
-                window.app = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.app);
-                window.db = getFirestore(window.app);
+                window.app = window.initializeApp(window.FIREBASE_CONFIG);
+                window.storage = window.getStorage(window.app);
+                window.db = window.getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
 
                 showVault();
@@ -982,6 +988,59 @@
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Login failed: ' + error.message);
+            }
+        };
+
+        window.loginWithBiometric = async function() {
+            try {
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (!biometricDataStr) throw new Error('Biometric not setup');
+
+                const biometricData = JSON.parse(biometricDataStr);
+                
+                const challenge = crypto.getRandomValues(new Uint8Array(32));
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge,
+                        allowCredentials: [{
+                            id: base64ToArrayBuffer(biometricData.credentialId),
+                            type: 'public-key',
+                            transports: ['internal']
+                        }],
+                        timeout: 60000,
+                        userVerification: "required"
+                    }
+                });
+
+                if (!assertion) throw new Error('Biometric failed');
+
+                const key = await crypto.subtle.importKey(
+                    'raw',
+                    base64ToArrayBuffer(biometricData.key),
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['decrypt']
+                );
+
+                const decryptedPasswordBuffer = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: base64ToArrayBuffer(biometricData.iv) },
+                    key,
+                    base64ToArrayBuffer(biometricData.encryptedPassword)
+                );
+
+                const decoder = new TextDecoder();
+                const password = decoder.decode(decryptedPasswordBuffer);
+
+                window.app = window.initializeApp(window.FIREBASE_CONFIG);
+                window.storage = window.getStorage(window.app);
+                window.db = window.getFirestore(window.app);
+                window.encryptionKey = await deriveKey(password);
+
+                showVault();
+                await loadPhotos();
+            } catch (error) {
+                console.error('Biometric login error:', error);
+                alert('Biometric login failed. Please use password.');
             }
         };
 
@@ -996,6 +1055,294 @@
             window.photos = [];
             location.reload();
         };
+
+        window.showChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.add('active');
+        };
+
+        window.closeChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('imageModal').classList.remove('active');
+            document.getElementById('modalImg').src = '';
+        };
+
+        window.closeActionSheet = function() {
+            document.getElementById('actionBackdrop').classList.remove('active');
+            document.getElementById('actionSheet').classList.remove('active');
+        };
+
+        window.selectFolder = function(folder) {
+            window.currentFolder = folder;
+            renderFolders();
+            renderPhotos();
+        };
+
+        window.createNewFolder = function() {
+            const dialog = document.createElement('div');
+            dialog.className = 'modal active';
+            dialog.innerHTML = `
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">New Folder</h2>
+                        <p class="auth-subtitle">Create a folder to organize photos</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Folder Name</label>
+                        <input type="text" class="form-input" id="newFolderInput" placeholder="Enter folder name" autofocus>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="createFolderConfirm()">Create</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove()">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+            
+            setTimeout(() => document.getElementById('newFolderInput').focus(), 100);
+            
+            document.getElementById('newFolderInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') createFolderConfirm();
+            });
+        };
+
+        window.createFolderConfirm = function() {
+            const input = document.getElementById('newFolderInput');
+            const folderName = input.value.trim();
+            
+            if (!folderName) {
+                alert('Please enter a folder name');
+                return;
+            }
+            
+            if (window.folders.includes(folderName)) {
+                alert('Folder already exists!');
+                return;
+            }
+            
+            window.folders.push(folderName);
+            window.currentFolder = folderName;
+            document.querySelector('.modal.active').remove();
+            renderFolders();
+            renderPhotos();
+        };
+
+        window.showPhotoActions = function(photoId) {
+            window.currentPhotoId = photoId;
+            const photo = window.photos.find(p => p.id === photoId);
+            
+            const actionList = `
+                <div class="action-item" onclick="viewPhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">👁</span>
+                    View Photo
+                </div>
+                <div class="action-item" onclick="downloadPhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">⬇️</span>
+                    Download
+                </div>
+                ${window.folders.length > 1 ? `
+                    <div class="action-item" onclick="movePhotoPrompt('${photoId}'); closeActionSheet();">
+                        <span class="action-icon">📁</span>
+                        Move to Folder
+                    </div>
+                ` : ''}
+                <div class="action-item danger" onclick="deletePhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">🗑</span>
+                    Delete
+                </div>
+            `;
+            
+            document.getElementById('actionSheetTitle').textContent = photo.name;
+            document.getElementById('actionList').innerHTML = actionList;
+            document.getElementById('actionBackdrop').classList.add('active');
+            document.getElementById('actionSheet').classList.add('active');
+        };
+
+        window.viewPhoto = viewPhoto;
+        window.downloadPhoto = downloadPhoto;
+        window.deletePhoto = deletePhoto;
+
+        window.movePhotoPrompt = async function(photoId) {
+            closeActionSheet();
+            
+            const dialog = document.createElement('div');
+            dialog.className = 'modal active';
+            
+            const availableFolders = window.folders.filter(f => f !== 'All Photos');
+            
+            dialog.innerHTML = `
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">Move to Folder</h2>
+                        <p class="auth-subtitle">Select destination folder</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                        ${availableFolders.map(folder => `
+                            <button class="btn btn-secondary" style="width: 100%; justify-content: flex-start;" onclick="movePhotoToFolder('${photoId}', '${folder}')">
+                                📁 ${folder}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-ghost" style="width: 100%;" onclick="this.closest('.modal').remove()">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        };
+
+        window.movePhotoToFolder = async function(photoId, folderName) {
+            try {
+                const photoIndex = window.photos.findIndex(p => p.id === photoId);
+                if (photoIndex === -1) throw new Error('Photo not found');
+                
+                window.photos[photoIndex].folder = folderName;
+                await window.setDoc(window.doc(window.db, 'photos', photoId), window.photos[photoIndex]);
+                
+                document.querySelector('.modal.active').remove();
+                updateFolders();
+                renderPhotos();
+            } catch (error) {
+                console.error('Move error:', error);
+                alert('Failed to move photo');
+            }
+        };
+
+        window.changePassword = async function() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters');
+                return;
+            }
+
+            const currentPasswordHash = await hashPassword(currentPassword);
+            const storedHash = localStorage.getItem('passwordHash');
+            
+            if (currentPasswordHash !== storedHash) {
+                alert('Current password is incorrect');
+                return;
+            }
+
+            // Show confirmation dialog
+            const confirmDialog = document.createElement('div');
+            confirmDialog.className = 'modal active';
+            confirmDialog.innerHTML = `
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">⚠️ Confirm</h2>
+                        <p class="auth-subtitle">Re-encrypt ${window.photos.length} photos with new password?</p>
+                        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">This cannot be undone.</p>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="proceedPasswordChange()">Yes, Change Password</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove()">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(confirmDialog);
+            
+            // Store passwords temporarily
+            window._changePasswordData = { currentPassword, newPassword };
+        };
+
+        window.proceedPasswordChange = async function() {
+            document.querySelector('.modal.active:not(#changePasswordModal)').remove();
+            
+            const { currentPassword, newPassword } = window._changePasswordData;
+            delete window._changePasswordData;
+
+            document.getElementById('reencryptProgress').classList.remove('hidden');
+            const progressText = document.getElementById('progressText');
+
+            try {
+                const oldKey = await deriveKey(currentPassword);
+                const newKey = await deriveKey(newPassword);
+
+                for (let i = 0; i < window.photos.length; i++) {
+                    const photo = window.photos[i];
+                    progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
+
+                    const photoRef = window.ref(window.storage, `photos/${photo.id}.enc`);
+                    const blob = await window.getBlob(photoRef);
+                    const encryptedArray = new Uint8Array(await blob.arrayBuffer());
+
+                    // Decrypt with old key
+                    const iv1 = encryptedArray.slice(0, 12);
+                    const encrypted1 = encryptedArray.slice(12);
+                    const decryptedData = await crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv: iv1 },
+                        oldKey,
+                        encrypted1
+                    );
+
+                    // Re-encrypt with new key
+                    const iv2 = crypto.getRandomValues(new Uint8Array(12));
+                    const encrypted2 = await crypto.subtle.encrypt(
+                        { name: 'AES-GCM', iv: iv2 },
+                        newKey,
+                        decryptedData
+                    );
+
+                    const reencrypted = new Uint8Array(iv2.length + encrypted2.byteLength);
+                    reencrypted.set(iv2, 0);
+                    reencrypted.set(new Uint8Array(encrypted2), iv2.length);
+
+                    await window.uploadBytes(photoRef, reencrypted);
+                }
+
+                const newPasswordHash = await hashPassword(newPassword);
+                localStorage.setItem('passwordHash', newPasswordHash);
+                window.encryptionKey = newKey;
+
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (biometricDataStr) {
+                    try {
+                        await setupBiometric(newPassword);
+                    } catch {
+                        localStorage.removeItem('biometricAuth');
+                    }
+                }
+
+                alert('Password changed successfully!');
+                document.getElementById('reencryptProgress').classList.add('hidden');
+                closeChangePassword();
+            } catch (error) {
+                console.error('Change password error:', error);
+                alert('Failed to change password: ' + error.message);
+                document.getElementById('reencryptProgress').classList.add('hidden');
+            }
+        };
+
+        // Check if vault is initialized
+        const isInitialized = localStorage.getItem('vaultInitialized') === 'true';
+
+        if (isInitialized) {
+            document.getElementById('authTitle').textContent = 'Welcome Back';
+            document.getElementById('authSubtitle').textContent = 'Enter your password to unlock';
+            
+            // Check for biometric
+            (async () => {
+                const hasBiometric = localStorage.getItem('biometricAuth');
+                const isAvailable = await isBiometricAvailable();
+                if (hasBiometric && isAvailable) {
+                    document.getElementById('biometricBtn').classList.remove('hidden');
+                }
+            })();
+        } else {
+            document.getElementById('authTitle').textContent = 'Create Vault';
+            document.getElementById('authSubtitle').textContent = 'Choose a secure password';
+            document.getElementById('passwordForm').classList.add('hidden');
+            document.getElementById('setupForm').classList.remove('hidden');
+        }
 
         // Encryption functions
         async function deriveKey(password) {
@@ -1159,11 +1506,11 @@
                     const photoId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                     const folder = window.currentFolder || 'All Photos';
                     
-                    const storageRef = ref(window.storage, `photos/${photoId}.enc`);
-                    await uploadBytes(storageRef, encryptedData);
-                    const downloadURL = await getDownloadURL(storageRef);
+                    const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                    await window.uploadBytes(storageRef, encryptedData);
+                    const downloadURL = await window.getDownloadURL(storageRef);
                     
-                    await setDoc(doc(window.db, 'photos', photoId), {
+                    await window.setDoc(window.doc(window.db, 'photos', photoId), {
                         id: photoId,
                         name: file.name,
                         size: file.size,
@@ -1198,7 +1545,7 @@
 
         async function loadPhotos() {
             try {
-                const querySnapshot = await getDocs(collection(window.db, 'photos'));
+                const querySnapshot = await window.getDocs(window.collection(window.db, 'photos'));
                 
                 window.photos = [];
                 querySnapshot.forEach((doc) => {
@@ -1383,8 +1730,8 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                const storageRef = ref(window.storage, `photos/${photoId}.enc`);
-                const blob = await getBlob(storageRef);
+                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                const blob = await window.getBlob(storageRef);
                 
                 const encryptedArray = new Uint8Array(await blob.arrayBuffer());
                 const decryptedData = await decryptData(encryptedArray);
@@ -1415,8 +1762,8 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                const storageRef = ref(window.storage, `photos/${photoId}.enc`);
-                const blob = await getBlob(storageRef);
+                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                const blob = await window.getBlob(storageRef);
                 
                 const encryptedArray = new Uint8Array(await blob.arrayBuffer());
                 const decryptedData = await decryptData(encryptedArray);
@@ -1451,10 +1798,10 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
                 
-                const storageRef = ref(window.storage, `photos/${photoId}.enc`);
-                await deleteObject(storageRef);
+                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                await window.deleteObject(storageRef);
                 
-                await deleteDoc(doc(window.db, 'photos', photoId));
+                await window.deleteDoc(window.doc(window.db, 'photos', photoId));
                 
                 window.photos = window.photos.filter(p => p.id !== photoId);
                 
@@ -1501,7 +1848,7 @@
                 if (photoIndex === -1) throw new Error('Photo not found');
                 
                 window.photos[photoIndex].folder = folderName;
-                await setDoc(doc(window.db, 'photos', photoId), window.photos[photoIndex]);
+                await window.setDoc(window.doc(window.db, 'photos', photoId), window.photos[photoIndex]);
                 
                 document.querySelector('.modal.active').remove();
                 updateFolders();
@@ -1645,9 +1992,9 @@
                 const decoder = new TextDecoder();
                 const password = decoder.decode(decryptedPasswordBuffer);
 
-                window.app = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.app);
-                window.db = getFirestore(window.app);
+                window.app = window.initializeApp(window.FIREBASE_CONFIG);
+                window.storage = window.getStorage(window.app);
+                window.db = window.getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
 
                 showVault();
@@ -1750,8 +2097,8 @@
                     const photo = window.photos[i];
                     progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
 
-                    const photoRef = ref(window.storage, `photos/${photo.id}.enc`);
-                    const blob = await getBlob(photoRef);
+                    const photoRef = window.ref(window.storage, `photos/${photo.id}.enc`);
+                    const blob = await window.getBlob(photoRef);
                     const encryptedArray = new Uint8Array(await blob.arrayBuffer());
 
                     // Decrypt with old key
@@ -1775,7 +2122,7 @@
                     reencrypted.set(iv2, 0);
                     reencrypted.set(new Uint8Array(encrypted2), iv2.length);
 
-                    await uploadBytes(photoRef, reencrypted);
+                    await window.uploadBytes(photoRef, reencrypted);
                 }
 
                 const newPasswordHash = await hashPassword(newPassword);
