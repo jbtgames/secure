@@ -1,6 +1,6 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
 
 // Make Firebase functions available globally
 window.initializeApp = initializeApp;
@@ -44,6 +44,45 @@ window.currentPhotoId = null;
 window.currentUsername = null;
 window.currentPhotoIndex = 0;
 window.currentPhotoList = [];
+
+// ==================== SECURITY HELPERS ====================
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Rate limiting for login attempts
+const loginAttempts = {
+    count: 0,
+    lastAttempt: 0,
+    isBlocked() {
+        const now = Date.now();
+        const timeSinceLastAttempt = now - this.lastAttempt;
+
+        // Reset counter after 15 minutes
+        if (timeSinceLastAttempt > 15 * 60 * 1000) {
+            this.count = 0;
+            return false;
+        }
+
+        // Block after 5 failed attempts
+        if (this.count >= 5) {
+            const remainingTime = Math.ceil((15 * 60 * 1000 - timeSinceLastAttempt) / 1000 / 60);
+            return remainingTime;
+        }
+
+        return false;
+    },
+    recordAttempt() {
+        this.count++;
+        this.lastAttempt = Date.now();
+    },
+    reset() {
+        this.count = 0;
+        this.lastAttempt = 0;
+    }
+};
 
 // ==================== DARK MODE ====================
 window.toggleDarkMode = function() {
@@ -91,6 +130,12 @@ window.switchToLogin = function() {
 };
 
 window.initializeWithPassword = async function() {
+    const blocked = loginAttempts.isBlocked();
+    if (blocked) {
+        alert(`Too many failed attempts. Please wait ${blocked} minutes before trying again.`);
+        return;
+    }
+
     const username = document.getElementById('setupUsername').value.trim().toLowerCase();
     const password = document.getElementById('setupPassword').value;
     const confirmPassword = document.getElementById('setupPasswordConfirm').value;
@@ -100,8 +145,8 @@ window.initializeWithPassword = async function() {
         return;
     }
 
-    if (!password || password.length < 6) {
-        alert('Password must be at least 6 characters');
+    if (!password || password.length < 12) {
+        alert('Password must be at least 12 characters for security');
         return;
     }
 
@@ -117,9 +162,13 @@ window.initializeWithPassword = async function() {
 
         const userDoc = await window.getDoc(window.doc(window.db, 'users', username));
         if (userDoc.exists()) {
+            loginAttempts.recordAttempt();
             alert('Username already taken. Please choose another.');
             return;
         }
+
+        // Set username before deriving key (needed for salt)
+        window.currentUsername = username;
 
         const passwordHash = await hashPassword(password);
         await window.setDoc(window.doc(window.db, 'users', username), {
@@ -129,7 +178,6 @@ window.initializeWithPassword = async function() {
         });
 
         window.encryptionKey = await deriveKey(password);
-        window.currentUsername = username;
 
         localStorage.setItem('username', username);
         localStorage.setItem('passwordHash', passwordHash);
@@ -143,11 +191,12 @@ window.initializeWithPassword = async function() {
                         <h2 class="auth-title">Enable Biometric?</h2>
                         <p class="auth-subtitle">Use Face ID / Touch ID for faster login</p>
                     </div>
-                    <button class="btn btn-primary" style="width: 100%;" onclick="enableBiometricConfirm('${password.replace(/'/g, "\\'")}')">Enable</button>
+                    <button class="btn btn-primary" style="width: 100%;" id="enableBiometricBtn">Enable</button>
                     <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove(); finalizeVaultSetup()">Skip</button>
                 </div>
             `;
             document.body.appendChild(dialog);
+            document.getElementById('enableBiometricBtn').addEventListener('click', () => enableBiometricConfirm(password));
             return;
         }
 
@@ -170,6 +219,12 @@ window.finalizeVaultSetup = function() {
 };
 
 window.login = async function() {
+    const blocked = loginAttempts.isBlocked();
+    if (blocked) {
+        alert(`Too many failed attempts. Please wait ${blocked} minutes before trying again.`);
+        return;
+    }
+
     const username = document.getElementById('username').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
 
@@ -189,22 +244,28 @@ window.login = async function() {
         window.db = window.getFirestore(window.app);
 
         const userDoc = await window.getDoc(window.doc(window.db, 'users', username));
-        
+
         if (!userDoc.exists()) {
+            loginAttempts.recordAttempt();
             alert('Username not found. Please sign up first.');
             return;
         }
 
         const userData = userDoc.data();
         const passwordHash = await hashPassword(password);
-        
+
         if (passwordHash !== userData.passwordHash) {
+            loginAttempts.recordAttempt();
             alert('Incorrect password');
             return;
         }
 
-        window.encryptionKey = await deriveKey(password);
+        // Successful login - reset rate limiter
+        loginAttempts.reset();
+
+        // Set username before deriving key (needed for salt)
         window.currentUsername = username;
+        window.encryptionKey = await deriveKey(password);
 
         localStorage.setItem('username', username);
         localStorage.setItem('passwordHash', passwordHash);
@@ -456,8 +517,8 @@ window.changePassword = async function() {
         return;
     }
 
-    if (newPassword.length < 6) {
-        alert('Password must be at least 6 characters');
+    if (newPassword.length < 12) {
+        alert('Password must be at least 12 characters for security');
         return;
     }
 
@@ -644,21 +705,21 @@ window.showPhotoActions = function(photoId) {
     const photo = window.photos.find(p => p.id === photoId);
     
     const actionList = `
-        <div class="action-item" onclick="viewPhoto('${photoId}'); closeActionSheet();">
+        <div class="action-item" onclick="viewPhoto('${escapeHTML(photoId)}'); closeActionSheet();">
             <span class="action-icon">👁</span>
             View Photo
         </div>
-        <div class="action-item" onclick="downloadPhoto('${photoId}'); closeActionSheet();">
+        <div class="action-item" onclick="downloadPhoto('${escapeHTML(photoId)}'); closeActionSheet();">
             <span class="action-icon">⬇️</span>
             Download
         </div>
         ${window.folders.length > 2 ? `
-            <div class="action-item" onclick="movePhotoPrompt('${photoId}'); closeActionSheet();">
+            <div class="action-item" onclick="movePhotoPrompt('${escapeHTML(photoId)}'); closeActionSheet();">
                 <span class="action-icon">📁</span>
                 Move to Folder
             </div>
         ` : ''}
-        <div class="action-item danger" onclick="deletePhoto('${photoId}'); closeActionSheet();">
+        <div class="action-item danger" onclick="deletePhoto('${escapeHTML(photoId)}'); closeActionSheet();">
             <span class="action-icon">🗑</span>
             Delete
         </div>
@@ -702,9 +763,9 @@ window.movePhotoPrompt = function(photoId) {
             </div>
             <div class="action-list">
                 ${availableFolders.map(folder => `
-                    <div class="action-item" onclick="movePhotoToFolder('${photoId}', '${folder}')">
+                    <div class="action-item" onclick="movePhotoToFolder('${escapeHTML(photoId)}', '${escapeHTML(folder)}')">
                         <span class="action-icon">${folder === 'Favorites' ? '⭐' : '📁'}</span>
-                        ${folder}
+                        ${escapeHTML(folder)}
                     </div>
                 `).join('')}
             </div>
@@ -1237,13 +1298,13 @@ function renderFolders() {
         } else {
             count = window.photos.filter(p => p.folder === folder).length;
         }
-        
+
         const isFavorite = folder === 'Favorites';
         const isActive = folder === window.currentFolder;
-        
+
         return `
-            <div class="folder-chip ${isActive ? 'active' : ''} ${isFavorite ? 'favorite' : ''}" onclick="selectFolder('${folder}')">
-                ${isFavorite ? '⭐' : (folder === 'All Photos' ? '📂' : '📁')} ${folder}
+            <div class="folder-chip ${isActive ? 'active' : ''} ${isFavorite ? 'favorite' : ''}" onclick="selectFolder('${escapeHTML(folder)}')">
+                ${isFavorite ? '⭐' : (folder === 'All Photos' ? '📂' : '📁')} ${escapeHTML(folder)}
                 <span class="folder-count">${count}</span>
             </div>
         `;
@@ -1274,21 +1335,21 @@ function renderPhotos() {
 
     grid.innerHTML = filteredPhotos.map((photo, index) => `
         <div class="photo-card" style="animation-delay: ${index * 0.05}s">
-            <div class="photo-thumbnail" onclick="viewPhoto('${photo.id}')">
-                ${photo.thumbnail 
-                    ? `<div class="photo-bg" style="background-image: url('${photo.thumbnail}');"></div>
-                       <img src="${photo.thumbnail}" class="photo-img" alt="${photo.name}">`
+            <div class="photo-thumbnail" onclick="viewPhoto('${escapeHTML(photo.id)}')">
+                ${photo.thumbnail
+                    ? `<div class="photo-bg" style="background-image: url('${escapeHTML(photo.thumbnail)}');"></div>
+                       <img src="${escapeHTML(photo.thumbnail)}" class="photo-img" alt="${escapeHTML(photo.name)}">`
                     : `<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 3rem;">🔐</div>`
                 }
-                <button class="photo-favorite-btn ${photo.favorite ? 'favorited' : ''}" onclick="toggleFavorite('${photo.id}', event)">
+                <button class="photo-favorite-btn ${photo.favorite ? 'favorited' : ''}" onclick="toggleFavorite('${escapeHTML(photo.id)}', event)">
                     ${photo.favorite ? '⭐' : '☆'}
                 </button>
             </div>
             <div class="photo-info">
-                <div class="photo-name">${photo.name}</div>
+                <div class="photo-name">${escapeHTML(photo.name)}</div>
                 <div class="photo-meta">
                     <span>${formatBytes(photo.size)}</span>
-                    <button class="btn-ghost btn-icon" style="padding: 0.25rem; font-size: 1.125rem;" onclick="showPhotoActions('${photo.id}')">⋯</button>
+                    <button class="btn-ghost btn-icon" style="padding: 0.25rem; font-size: 1.125rem;" onclick="showPhotoActions('${escapeHTML(photo.id)}')">⋯</button>
                 </div>
             </div>
         </div>
@@ -1324,11 +1385,14 @@ async function deriveKey(password) {
         ['deriveBits', 'deriveKey']
     );
 
+    // Use username as salt to ensure unique keys per user
+    const salt = encoder.encode(`umbra-ark-v2-${window.currentUsername}`);
+
     return crypto.subtle.deriveKey(
         {
             name: 'PBKDF2',
-            salt: encoder.encode('securevault-salt'),
-            iterations: 100000,
+            salt: salt,
+            iterations: 600000,
             hash: 'SHA-256'
         },
         keyMaterial,
