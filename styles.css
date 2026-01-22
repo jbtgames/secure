@@ -1192,3 +1192,285 @@ body {
     align-items: center;
     justify-content: center;
 }
+
+/* ==================== TAB NAVIGATION ==================== */
+.tab-nav {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.tab-section {
+    display: none;
+}
+
+.tab-section.active {
+    display: block;
+}
+
+/* ==================== NOTES ==================== */
+.notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.note-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    animation: fadeIn 0.3s ease;
+}
+
+.note-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.note-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.note-card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.note-card-preview {
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+}
+
+.note-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.note-card-date {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.note-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Note Editor Modal */
+.note-editor-container {
+    background: var(--bg-primary);
+    border-radius: 1rem;
+    width: 90%;
+    max-width: 800px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+}
+
+.note-editor-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.note-title-input {
+    flex: 1;
+    font-size: 1.5rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.note-title-input::placeholder {
+    color: var(--text-muted);
+}
+
+.note-editor-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.note-content-input {
+    flex: 1;
+    padding: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    outline: none;
+    resize: none;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.note-content-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ==================== FILES ==================== */
+.files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 0;
+}
+
+.file-item {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+    animation: fadeIn 0.3s ease;
+}
+
+.file-item:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--accent);
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--accent-light);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-meta {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 1rem;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* File type colors */
+.file-icon[data-type="pdf"] { background: #ef4444; color: white; }
+.file-icon[data-type="doc"] { background: #3b82f6; color: white; }
+.file-icon[data-type="xls"] { background: #22c55e; color: white; }
+.file-icon[data-type="zip"] { background: #f59e0b; color: white; }
+.file-icon[data-type="txt"] { background: #6366f1; color: white; }
+.file-icon[data-type="other"] { background: var(--accent-light); color: var(--text-primary); }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .notes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .note-editor-container {
+        width: 95%;
+        height: 85vh;
+    }
+    
+    .note-editor-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .note-editor-actions {
+        justify-content: flex-end;
+    }
+    
+    .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -37,13 +37,17 @@ window.storage = null;
 window.db = null;
 window.encryptionKey = null;
 window.photos = [];
+window.notes = [];
+window.files = [];
 window.imageCache = new Map(); // Cache decrypted images to avoid re-downloading
 window.currentFolder = 'All Photos';
 window.folders = ['All Photos', 'Favorites'];
 window.currentPhotoId = null;
+window.currentNoteId = null;
 window.currentUsername = null;
 window.currentPhotoIndex = 0;
 window.currentPhotoList = [];
+window.currentTab = 'photos';
 
 // ==================== SECURITY HELPERS ====================
 function escapeHTML(str) {
@@ -103,6 +107,26 @@ if (savedTheme === 'dark') {
         document.getElementById('darkModeToggle')?.classList.add('active');
     }, 100);
 }
+
+// ==================== TAB NAVIGATION ====================
+window.switchTab = function(tab) {
+    window.currentTab = tab;
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`${tab}Tab`).classList.add('active');
+
+    // Update tab sections
+    document.querySelectorAll('.tab-section').forEach(section => section.classList.remove('active'));
+    document.getElementById(`${tab}Section`).classList.add('active');
+
+    // Load data if needed
+    if (tab === 'notes' && window.notes.length === 0) {
+        loadNotes();
+    } else if (tab === 'files' && window.files.length === 0) {
+        loadFiles();
+    }
+};
 
 // ==================== SETTINGS MENU ====================
 window.showSettings = function() {
@@ -530,13 +554,14 @@ window.changePassword = async function() {
         return;
     }
 
+    const totalItems = window.photos.length + window.notes.length + window.files.length;
     const confirmDialog = document.createElement('div');
     confirmDialog.className = 'modal active';
     confirmDialog.innerHTML = `
         <div class="auth-card" style="margin: 0;">
             <div class="auth-header">
                 <h2 class="auth-title">⚠️ Confirm</h2>
-                <p class="auth-subtitle">Re-encrypt ${window.photos.length} photos with new password?</p>
+                <p class="auth-subtitle">Re-encrypt ${totalItems} items with new password?</p>
                 <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">This cannot be undone.</p>
             </div>
             <button class="btn btn-primary" style="width: 100%;" onclick="proceedPasswordChange()">Yes, Change Password</button>
@@ -561,9 +586,13 @@ window.proceedPasswordChange = async function() {
         const oldKey = await deriveKey(currentPassword);
         const newKey = await deriveKey(newPassword);
 
+        const totalItems = window.photos.length + window.notes.length + window.files.length;
+        let processed = 0;
+
+        // Re-encrypt photos
         for (let i = 0; i < window.photos.length; i++) {
             const photo = window.photos[i];
-            progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
+            progressText.textContent = `Re-encrypting photos... ${++processed}/${totalItems}`;
 
             const photoRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photo.id}.enc`);
             const blob = await window.getBlob(photoRef);
@@ -589,6 +618,70 @@ window.proceedPasswordChange = async function() {
             reencrypted.set(new Uint8Array(encrypted2), iv2.length);
 
             await window.uploadBytes(photoRef, reencrypted);
+        }
+
+        // Re-encrypt notes
+        for (let i = 0; i < window.notes.length; i++) {
+            const note = window.notes[i];
+            progressText.textContent = `Re-encrypting notes... ${++processed}/${totalItems}`;
+
+            const noteDoc = await window.getDoc(window.doc(window.db, 'users', window.currentUsername, 'notes', note.id));
+            const data = noteDoc.data();
+            const encryptedArray = base64ToArrayBuffer(data.encryptedContent);
+
+            const iv1 = new Uint8Array(encryptedArray).slice(0, 12);
+            const encrypted1 = new Uint8Array(encryptedArray).slice(12);
+            const decryptedData = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv1 },
+                oldKey,
+                encrypted1
+            );
+
+            const iv2 = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted2 = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv2 },
+                newKey,
+                decryptedData
+            );
+
+            const reencrypted = new Uint8Array(iv2.length + encrypted2.byteLength);
+            reencrypted.set(iv2, 0);
+            reencrypted.set(new Uint8Array(encrypted2), iv2.length);
+
+            await window.setDoc(window.doc(window.db, 'users', window.currentUsername, 'notes', note.id), {
+                encryptedContent: arrayBufferToBase64(reencrypted)
+            }, { merge: true });
+        }
+
+        // Re-encrypt files
+        for (let i = 0; i < window.files.length; i++) {
+            const file = window.files[i];
+            progressText.textContent = `Re-encrypting files... ${++processed}/${totalItems}`;
+
+            const fileRef = window.ref(window.storage, `users/${window.currentUsername}/files/${file.id}.enc`);
+            const blob = await window.getBlob(fileRef);
+            const encryptedArray = new Uint8Array(await blob.arrayBuffer());
+
+            const iv1 = encryptedArray.slice(0, 12);
+            const encrypted1 = encryptedArray.slice(12);
+            const decryptedData = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv1 },
+                oldKey,
+                encrypted1
+            );
+
+            const iv2 = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted2 = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv2 },
+                newKey,
+                decryptedData
+            );
+
+            const reencrypted = new Uint8Array(iv2.length + encrypted2.byteLength);
+            reencrypted.set(iv2, 0);
+            reencrypted.set(new Uint8Array(encrypted2), iv2.length);
+
+            await window.uploadBytes(fileRef, reencrypted);
         }
 
         const newPasswordHash = await hashPassword(newPassword);
@@ -633,8 +726,9 @@ window.confirmDeleteAccount = function() {
                 <p class="auth-subtitle">This will permanently delete:</p>
                 <ul style="text-align: left; margin: 1rem 0; color: var(--text-secondary);">
                     <li>All your photos (${window.photos.length})</li>
+                    <li>All your notes (${window.notes.length})</li>
+                    <li>All your files (${window.files.length})</li>
                     <li>Your account data</li>
-                    <li>All encrypted files</li>
                 </ul>
                 <p style="color: var(--danger); font-weight: 600;">This cannot be undone!</p>
             </div>
@@ -674,18 +768,43 @@ window.proceedDeleteAccount = async function() {
             </div>
         `;
 
+        // Delete photos from storage
         for (const photo of window.photos) {
             const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photo.id}.enc`);
             await window.deleteObject(storageRef).catch(() => {});
         }
 
-        const photosSnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'photos'));
-        const batch = window.writeBatch(window.db);
-        photosSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
+        // Delete files from storage
+        for (const file of window.files) {
+            const storageRef = window.ref(window.storage, `users/${window.currentUsername}/files/${file.id}.enc`);
+            await window.deleteObject(storageRef).catch(() => {});
+        }
 
+        // Delete photos from Firestore
+        const photosSnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'photos'));
+        const photosBatch = window.writeBatch(window.db);
+        photosSnapshot.forEach(doc => {
+            photosBatch.delete(doc.ref);
+        });
+        await photosBatch.commit();
+
+        // Delete notes from Firestore
+        const notesSnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'notes'));
+        const notesBatch = window.writeBatch(window.db);
+        notesSnapshot.forEach(doc => {
+            notesBatch.delete(doc.ref);
+        });
+        await notesBatch.commit();
+
+        // Delete files from Firestore
+        const filesSnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'files'));
+        const filesBatch = window.writeBatch(window.db);
+        filesSnapshot.forEach(doc => {
+            filesBatch.delete(doc.ref);
+        });
+        await filesBatch.commit();
+
+        // Delete user document
         await window.deleteDoc(window.doc(window.db, 'users', window.currentUsername));
 
         localStorage.clear();
@@ -698,6 +817,369 @@ window.proceedDeleteAccount = async function() {
         alert('Failed to delete account: ' + error.message);
     }
 };
+
+// ==================== NOTES ====================
+window.createNewNote = function() {
+    window.currentNoteId = null;
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteContent').value = '';
+    document.getElementById('noteEditorModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('noteTitle').focus(), 100);
+};
+
+window.editNote = function(noteId) {
+    const note = window.notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    window.currentNoteId = noteId;
+    document.getElementById('noteTitle').value = note.title;
+    document.getElementById('noteContent').value = note.content;
+    document.getElementById('noteEditorModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('noteTitle').focus(), 100);
+};
+
+window.closeNoteEditor = function() {
+    document.getElementById('noteEditorModal').classList.remove('active');
+    document.body.style.overflow = '';
+    window.currentNoteId = null;
+};
+
+window.saveNote = async function() {
+    const title = document.getElementById('noteTitle').value.trim();
+    const content = document.getElementById('noteContent').value.trim();
+
+    if (!title) {
+        alert('Please enter a title');
+        return;
+    }
+
+    if (!content) {
+        alert('Please enter some content');
+        return;
+    }
+
+    try {
+        const noteId = window.currentNoteId || Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const timestamp = new Date().toISOString();
+
+        // Encrypt note content
+        const encoder = new TextEncoder();
+        const noteData = JSON.stringify({ title, content });
+        const encryptedData = await encryptData(encoder.encode(noteData));
+
+        await window.setDoc(window.doc(window.db, 'users', window.currentUsername, 'notes', noteId), {
+            id: noteId,
+            encryptedContent: arrayBufferToBase64(encryptedData),
+            updated: timestamp,
+            created: window.currentNoteId ? (window.notes.find(n => n.id === noteId)?.created || timestamp) : timestamp
+        });
+
+        // Update local state
+        const noteIndex = window.notes.findIndex(n => n.id === noteId);
+        const noteObj = {
+            id: noteId,
+            title,
+            content,
+            updated: timestamp,
+            created: window.currentNoteId ? (window.notes.find(n => n.id === noteId)?.created || timestamp) : timestamp
+        };
+
+        if (noteIndex >= 0) {
+            window.notes[noteIndex] = noteObj;
+        } else {
+            window.notes.push(noteObj);
+        }
+
+        closeNoteEditor();
+        renderNotes();
+        updateStats();
+    } catch (error) {
+        console.error('Save note error:', error);
+        alert('Failed to save note: ' + error.message);
+    }
+};
+
+window.deleteNote = async function(noteId) {
+    if (!confirm('Delete this note permanently?')) return;
+
+    try {
+        await window.deleteDoc(window.doc(window.db, 'users', window.currentUsername, 'notes', noteId));
+        window.notes = window.notes.filter(n => n.id !== noteId);
+        renderNotes();
+        updateStats();
+    } catch (error) {
+        console.error('Delete note error:', error);
+        alert('Failed to delete note');
+    }
+};
+
+async function loadNotes() {
+    try {
+        if (!window.currentUsername) return;
+
+        const querySnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'notes'));
+
+        window.notes = [];
+        for (const doc of querySnapshot.docs) {
+            const data = doc.data();
+            try {
+                // Decrypt note content
+                const encryptedArray = base64ToArrayBuffer(data.encryptedContent);
+                const decryptedData = await decryptData(new Uint8Array(encryptedArray));
+                const decoder = new TextDecoder();
+                const noteData = JSON.parse(decoder.decode(decryptedData));
+
+                window.notes.push({
+                    id: doc.id,
+                    title: noteData.title,
+                    content: noteData.content,
+                    updated: data.updated,
+                    created: data.created
+                });
+            } catch (error) {
+                console.error('Failed to decrypt note:', doc.id, error);
+            }
+        }
+
+        renderNotes();
+        updateStats();
+    } catch (error) {
+        console.error('Load notes error:', error);
+    }
+}
+
+function renderNotes() {
+    const grid = document.getElementById('notesGrid');
+    const emptyState = document.getElementById('notesEmptyState');
+
+    if (window.notes.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    // Sort by updated date
+    const sortedNotes = [...window.notes].sort((a, b) => new Date(b.updated) - new Date(a.updated));
+
+    grid.innerHTML = sortedNotes.map(note => `
+        <div class="note-card" onclick="editNote('${escapeHTML(note.id)}')">
+            <div class="note-card-header">
+                <div class="note-card-title">${escapeHTML(note.title)}</div>
+            </div>
+            <div class="note-card-preview">${escapeHTML(note.content)}</div>
+            <div class="note-card-meta">
+                <div class="note-card-date">${formatDate(note.updated)}</div>
+                <div class="note-card-actions">
+                    <button class="btn-ghost btn-icon" style="padding: 0.25rem;" onclick="event.stopPropagation(); deleteNote('${escapeHTML(note.id)}')">🗑</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+}
+
+async function encryptData(data) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        window.encryptionKey,
+        data
+    );
+
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return combined;
+}
+
+// ==================== FILES ====================
+window.handleFileUpload = async function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    if (!window.currentUsername) {
+        alert('Error: Not logged in');
+        return;
+    }
+
+    for (const file of files) {
+        try {
+            // Encrypt file
+            const arrayBuffer = await file.arrayBuffer();
+            const encryptedData = await encryptData(new Uint8Array(arrayBuffer));
+
+            const fileId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const storageRef = window.ref(window.storage, `users/${window.currentUsername}/files/${fileId}.enc`);
+            await window.uploadBytes(storageRef, encryptedData);
+            const downloadURL = await window.getDownloadURL(storageRef);
+
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            await window.setDoc(window.doc(window.db, 'users', window.currentUsername, 'files', fileId), {
+                id: fileId,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                extension: fileExt,
+                uploaded: new Date().toISOString(),
+                url: downloadURL
+            });
+
+            window.files.push({
+                id: fileId,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                extension: fileExt,
+                uploaded: new Date().toISOString(),
+                url: downloadURL
+            });
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload ' + file.name);
+        }
+    }
+
+    e.target.value = '';
+    renderFiles();
+    updateStats();
+};
+
+window.downloadFile = async function(fileId) {
+    try {
+        const file = window.files.find(f => f.id === fileId);
+        if (!file) throw new Error('File not found');
+
+        const storageRef = window.ref(window.storage, `users/${window.currentUsername}/files/${fileId}.enc`);
+        const blob = await window.getBlob(storageRef);
+
+        const encryptedArray = new Uint8Array(await blob.arrayBuffer());
+        const decryptedData = await decryptData(encryptedArray);
+
+        const decryptedBlob = new Blob([decryptedData], { type: file.type });
+        const url = URL.createObjectURL(decryptedBlob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Failed to download file');
+    }
+};
+
+window.deleteFile = async function(fileId) {
+    if (!confirm('Delete this file permanently?')) return;
+
+    try {
+        const storageRef = window.ref(window.storage, `users/${window.currentUsername}/files/${fileId}.enc`);
+        await window.deleteObject(storageRef);
+        await window.deleteDoc(window.doc(window.db, 'users', window.currentUsername, 'files', fileId));
+
+        window.files = window.files.filter(f => f.id !== fileId);
+        renderFiles();
+        updateStats();
+    } catch (error) {
+        console.error('Delete file error:', error);
+        alert('Failed to delete file');
+    }
+};
+
+async function loadFiles() {
+    try {
+        if (!window.currentUsername) return;
+
+        const querySnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'files'));
+
+        window.files = [];
+        querySnapshot.forEach((doc) => {
+            window.files.push({...doc.data(), id: doc.id});
+        });
+
+        renderFiles();
+        updateStats();
+    } catch (error) {
+        console.error('Load files error:', error);
+    }
+}
+
+function renderFiles() {
+    const list = document.getElementById('filesList');
+    const emptyState = document.getElementById('filesEmptyState');
+
+    if (window.files.length === 0) {
+        list.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    // Sort by upload date
+    const sortedFiles = [...window.files].sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+
+    list.innerHTML = sortedFiles.map(file => {
+        const fileType = getFileType(file.extension);
+        const icon = getFileIcon(fileType);
+
+        return `
+            <div class="file-item">
+                <div class="file-icon" data-type="${fileType}">${icon}</div>
+                <div class="file-info">
+                    <div class="file-name">${escapeHTML(file.name)}</div>
+                    <div class="file-meta">
+                        <span>${formatBytes(file.size)}</span>
+                        <span>${formatDate(file.uploaded)}</span>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn btn-ghost btn-icon" onclick="downloadFile('${escapeHTML(file.id)}')" title="Download">⬇️</button>
+                    <button class="btn btn-ghost btn-icon" onclick="deleteFile('${escapeHTML(file.id)}')" title="Delete">🗑</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getFileType(extension) {
+    const ext = extension.toLowerCase();
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'doc';
+    if (['xls', 'xlsx'].includes(ext)) return 'xls';
+    if (['zip', 'rar', '7z'].includes(ext)) return 'zip';
+    if (['txt', 'md'].includes(ext)) return 'txt';
+    return 'other';
+}
+
+function getFileIcon(type) {
+    const icons = {
+        pdf: '📄',
+        doc: '📝',
+        xls: '📊',
+        zip: '📦',
+        txt: '📃',
+        other: '📎'
+    };
+    return icons[type] || '📎';
+}
 
 // ==================== PHOTO ACTIONS ====================
 window.showPhotoActions = function(photoId) {
@@ -972,6 +1454,9 @@ window.deletePhoto = deletePhoto;
 function setupEventListeners() {
     const fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', handleFileSelect);
+
+    const anyFileInput = document.getElementById('anyFileInput');
+    anyFileInput.addEventListener('change', handleFileUpload);
 
     document.getElementById('imageModal').addEventListener('click', (e) => {
         if (e.target.id === 'imageModal') closeModal();
@@ -1258,7 +1743,7 @@ async function loadPhotos() {
         }
 
         const querySnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'photos'));
-        
+
         window.photos = [];
         querySnapshot.forEach((doc) => {
             window.photos.push({...doc.data(), id: doc.id});
@@ -1267,6 +1752,10 @@ async function loadPhotos() {
         updateFolders();
         renderPhotos();
         setupEventListeners();
+
+        // Load notes and files
+        await loadNotes();
+        await loadFiles();
     } catch (error) {
         console.error('Load error:', error);
     }
@@ -1360,9 +1849,12 @@ function renderPhotos() {
 
 function updateStats() {
     document.getElementById('photoCount').textContent = window.photos.length;
-    document.getElementById('favoriteCount').textContent = window.photos.filter(p => p.favorite).length;
-    
-    const totalBytes = window.photos.reduce((sum, p) => sum + (p.size || 0), 0);
+    document.getElementById('noteCount').textContent = window.notes.length;
+    document.getElementById('fileCount').textContent = window.files.length;
+
+    const photoBytes = window.photos.reduce((sum, p) => sum + (p.size || 0), 0);
+    const fileBytes = window.files.reduce((sum, f) => sum + (f.size || 0), 0);
+    const totalBytes = photoBytes + fileBytes;
     document.getElementById('totalSize').textContent = formatBytes(totalBytes);
 }
 
