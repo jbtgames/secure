@@ -37,6 +37,7 @@ window.storage = null;
 window.db = null;
 window.encryptionKey = null;
 window.photos = [];
+window.imageCache = new Map(); // Cache decrypted images to avoid re-downloading
 window.currentFolder = 'All Photos';
 window.folders = ['All Photos', 'Favorites'];
 window.currentPhotoId = null;
@@ -281,6 +282,7 @@ window.logout = function() {
     if (confirm('Are you sure you want to logout?')) {
         window.encryptionKey = null;
         window.photos = [];
+        window.imageCache.clear();
         location.reload();
     }
 };
@@ -677,6 +679,8 @@ window.closeModal = function() {
     document.getElementById('imageModal').classList.remove('active');
     document.getElementById('modalImg').src = '';
     document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 };
 
 window.movePhotoPrompt = function(photoId) {
@@ -752,26 +756,44 @@ async function viewPhoto(photoId) {
     
     const photo = filteredPhotos[window.currentPhotoIndex];
     if (!photo) return;
-    
-    // Show modal with spinner
+
+    // Update modal info
+    modalFilename.textContent = photo.name;
+    modalCounter.textContent = `${window.currentPhotoIndex + 1} / ${filteredPhotos.length}`;
+
+    // Check if cached
+    if (window.imageCache.has(photo.id)) {
+        // Use cached image - no loading needed
+        modalImg.src = window.imageCache.get(photo.id);
+        modalImg.classList.add('loaded');
+        modalSpinner.classList.add('hidden');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        updateModalNavButtons();
+        return;
+    }
+
+    // Show modal with spinner for new image
     modalImg.classList.remove('loaded');
     modalImg.src = '';
     modalSpinner.classList.remove('hidden');
-    modalFilename.textContent = photo.name;
-    modalCounter.textContent = `${window.currentPhotoIndex + 1} / ${filteredPhotos.length}`;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
-    
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+
     // Update nav buttons visibility
     updateModalNavButtons();
 
     try {
         const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photo.id}.enc`);
         const blob = await window.getBlob(storageRef);
-        
+
         const encryptedArray = new Uint8Array(await blob.arrayBuffer());
         const decryptedData = await decryptData(encryptedArray);
-        
+
         const bytes = new Uint8Array(decryptedData);
         let binary = '';
         const chunkSize = 0x8000;
@@ -779,10 +801,13 @@ async function viewPhoto(photoId) {
             const chunk = bytes.subarray(i, i + chunkSize);
             binary += String.fromCharCode.apply(null, chunk);
         }
-        
+
         const base64 = btoa(binary);
         const dataUrl = `data:${photo.type};base64,${base64}`;
-        
+
+        // Cache the decrypted image
+        window.imageCache.set(photo.id, dataUrl);
+
         modalImg.onload = () => {
             modalSpinner.classList.add('hidden');
             modalImg.classList.add('loaded');
@@ -949,6 +974,7 @@ function setupEventListeners() {
 
         // Always prevent scrolling in modal
         e.preventDefault();
+        e.stopPropagation();
 
         // Apply real-time drag effect for horizontal swipes
         if (isSwiping && modalImgWrapper) {
@@ -985,10 +1011,17 @@ function setupEventListeners() {
         touchCurrentX = touchStartX;
     }, { passive: true });
 
-    // Prevent momentum scrolling on modal
-    modalElement.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-    }, { passive: false });
+    // Prevent all scrolling on document body when modal is active
+    const preventBodyScroll = (e) => {
+        if (modalElement.classList.contains('active')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    };
+
+    document.body.addEventListener('touchmove', preventBodyScroll, { passive: false });
+    document.addEventListener('touchmove', preventBodyScroll, { passive: false });
 }
 
 async function handleFileSelect(e) {
