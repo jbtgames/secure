@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Users folder
+    match /users/{userId}/{allPaths=**} {
+      // Allow read/write to photos
+      match /photos/{photoId} {
+        allow read, write: if true;
+      }
+
+      // Allow read/write to files
+      match /files/{fileId} {
+        allow read, write: if true;
+      }
+    }
+  }
+}
