@@ -106,8 +106,12 @@
                 <div class="stat-label">Photos</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="favoriteCount">0</div>
-                <div class="stat-label">Favorites</div>
+                <div class="stat-value" id="noteCount">0</div>
+                <div class="stat-label">Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="fileCount">0</div>
+                <div class="stat-label">Files</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="totalSize">0 MB</div>
@@ -115,33 +119,85 @@
             </div>
         </div>
 
-        <!-- Folders -->
-        <div class="folder-nav">
-            <div class="folder-header">
-                <div class="folder-title">📁 <span id="currentFolderName">All Photos</span></div>
-                <button class="btn btn-ghost btn-icon" onclick="createNewFolder()">+</button>
-            </div>
-            <div class="folder-list" id="folderList"></div>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('photos')" id="photosTab">📸 Photos</button>
+            <button class="tab-btn" onclick="switchTab('notes')" id="notesTab">📝 Notes</button>
+            <button class="tab-btn" onclick="switchTab('files')" id="filesTab">📎 Files</button>
         </div>
 
-        <!-- Upload Button -->
-        <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 14V6M10 6L6 10M10 6L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 16H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Upload Photos
-        </button>
-        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+        <!-- Photos Section -->
+        <div id="photosSection" class="tab-section active">
+            <!-- Folders -->
+            <div class="folder-nav">
+                <div class="folder-header">
+                    <div class="folder-title">📁 <span id="currentFolderName">All Photos</span></div>
+                    <button class="btn btn-ghost btn-icon" onclick="createNewFolder()">+</button>
+                </div>
+                <div class="folder-list" id="folderList"></div>
+            </div>
 
-        <!-- Photo Grid -->
-        <div class="photo-grid" id="photoGrid"></div>
+            <!-- Upload Button -->
+            <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 14V6M10 6L6 10M10 6L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 16H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Upload Photos
+            </button>
+            <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
 
-        <!-- Empty State -->
-        <div class="empty-state hidden" id="emptyState">
-            <div class="empty-icon">📸</div>
-            <div class="empty-text">No photos yet</div>
-            <div class="empty-hint">Tap the upload area to add your first photo</div>
+            <!-- Photo Grid -->
+            <div class="photo-grid" id="photoGrid"></div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="emptyState">
+                <div class="empty-icon">📸</div>
+                <div class="empty-text">No photos yet</div>
+                <div class="empty-hint">Tap the upload area to add your first photo</div>
+            </div>
+        </div>
+
+        <!-- Notes Section -->
+        <div id="notesSection" class="tab-section">
+            <button class="upload-btn" onclick="createNewNote()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                New Note
+            </button>
+
+            <!-- Notes Grid -->
+            <div class="notes-grid" id="notesGrid"></div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="notesEmptyState">
+                <div class="empty-icon">📝</div>
+                <div class="empty-text">No notes yet</div>
+                <div class="empty-hint">Create your first encrypted note</div>
+            </div>
+        </div>
+
+        <!-- Files Section -->
+        <div id="filesSection" class="tab-section">
+            <button class="upload-btn" onclick="document.getElementById('anyFileInput').click()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 14V6M10 6L6 10M10 6L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 16H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Upload Files
+            </button>
+            <input type="file" id="anyFileInput" multiple style="display: none;">
+
+            <!-- Files List -->
+            <div class="files-list" id="filesList"></div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="filesEmptyState">
+                <div class="empty-icon">📎</div>
+                <div class="empty-text">No files yet</div>
+                <div class="empty-hint">Upload any type of file securely</div>
+            </div>
         </div>
     </div>
 
@@ -265,7 +321,7 @@
         <div class="auth-card" style="margin: 0;">
             <div class="auth-header">
                 <h2 class="auth-title">Change Password</h2>
-                <p class="auth-subtitle">All photos will be re-encrypted</p>
+                <p class="auth-subtitle">All data will be re-encrypted</p>
             </div>
             <div class="form-group">
                 <label class="form-label">Current Password</label>
@@ -281,10 +337,24 @@
             </div>
             <div id="reencryptProgress" class="loading hidden">
                 <div class="spinner"></div>
-                <p id="progressText">Re-encrypting photos...</p>
+                <p id="progressText">Re-encrypting data...</p>
             </div>
             <button class="btn btn-primary" style="width: 100%;" onclick="changePassword()">Change Password</button>
             <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="closeChangePassword()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Note Editor Modal -->
+    <div class="modal" id="noteEditorModal">
+        <div class="note-editor-container">
+            <div class="note-editor-header">
+                <input type="text" class="note-title-input" id="noteTitle" placeholder="Note title...">
+                <div class="note-editor-actions">
+                    <button class="btn btn-primary" onclick="saveNote()">Save</button>
+                    <button class="btn btn-ghost" onclick="closeNoteEditor()">Cancel</button>
+                </div>
+            </div>
+            <textarea class="note-content-input" id="noteContent" placeholder="Start typing your encrypted note..."></textarea>
         </div>
     </div>
 
