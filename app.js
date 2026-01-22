@@ -676,6 +676,7 @@ window.closeActionSheet = function() {
 window.closeModal = function() {
     document.getElementById('imageModal').classList.remove('active');
     document.getElementById('modalImg').src = '';
+    document.body.style.overflow = '';
 };
 
 window.movePhotoPrompt = function(photoId) {
@@ -759,6 +760,7 @@ async function viewPhoto(photoId) {
     modalFilename.textContent = photo.name;
     modalCounter.textContent = `${window.currentPhotoIndex + 1} / ${filteredPhotos.length}`;
     modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
     
     // Update nav buttons visibility
     updateModalNavButtons();
@@ -905,61 +907,88 @@ function setupEventListeners() {
         }
     });
     
-    // Touch swipe for modal
+    // Touch swipe for modal with smooth animations
     let touchStartX = 0;
     let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
+    let touchCurrentX = 0;
     let isSwiping = false;
+    let isScrollBlocked = false;
 
-    const modal = document.getElementById('imageModal');
+    const modalElement = document.getElementById('imageModal');
+    const modalImgWrapper = document.querySelector('.modal-img-wrapper');
 
-    modal.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+    // Prevent all scrolling on modal
+    modalElement.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].clientX;
+        touchStartY = e.changedTouches[0].clientY;
+        touchCurrentX = touchStartX;
         isSwiping = false;
+        isScrollBlocked = false;
+
+        // Remove transition for immediate feedback
+        if (modalImgWrapper) {
+            modalImgWrapper.style.transition = 'none';
+        }
     }, { passive: true });
 
-    modal.addEventListener('touchmove', (e) => {
-        if (!isSwiping) {
-            const touchCurrentX = e.changedTouches[0].screenX;
-            const touchCurrentY = e.changedTouches[0].screenY;
-            const deltaX = Math.abs(touchCurrentX - touchStartX);
-            const deltaY = Math.abs(touchCurrentY - touchStartY);
+    modalElement.addEventListener('touchmove', (e) => {
+        const currentX = e.changedTouches[0].clientX;
+        const currentY = e.changedTouches[0].clientY;
+        const deltaX = Math.abs(currentX - touchStartX);
+        const deltaY = Math.abs(currentY - touchStartY);
 
-            // If horizontal movement is greater than vertical, it's a swipe
-            if (deltaX > deltaY && deltaX > 10) {
+        // Determine swipe direction on first significant movement
+        if (!isScrollBlocked && (deltaX > 5 || deltaY > 5)) {
+            if (deltaX > deltaY) {
                 isSwiping = true;
+                isScrollBlocked = true;
+            } else {
+                isScrollBlocked = true;
             }
         }
 
-        // Prevent scrolling when horizontal swiping
-        if (isSwiping) {
-            e.preventDefault();
+        // Always prevent scrolling in modal
+        e.preventDefault();
+
+        // Apply real-time drag effect for horizontal swipes
+        if (isSwiping && modalImgWrapper) {
+            touchCurrentX = currentX;
+            const offset = currentX - touchStartX;
+            // Apply drag with slight resistance
+            const dragAmount = offset * 0.5;
+            modalImgWrapper.style.transform = `translateX(${dragAmount}px)`;
+            modalImgWrapper.style.opacity = 1 - Math.abs(offset) / 1000;
         }
     }, { passive: false });
 
-    modal.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
-        isSwiping = false;
-    }, { passive: true });
+    modalElement.addEventListener('touchend', (e) => {
+        const deltaX = touchCurrentX - touchStartX;
+        const swipeThreshold = 75;
 
-    function handleSwipe() {
-        const swipeThreshold = 50;
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = Math.abs(touchEndY - touchStartY);
+        if (modalImgWrapper) {
+            modalImgWrapper.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+            modalImgWrapper.style.transform = '';
+            modalImgWrapper.style.opacity = '';
+        }
 
-        // Only trigger navigation if horizontal movement is dominant
-        if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaX) > deltaY) {
-            if (deltaX < 0) {
+        // Navigate if swipe threshold met
+        if (isSwiping && Math.abs(deltaX) > swipeThreshold) {
+            if (deltaX < 0 && window.currentPhotoIndex < window.currentPhotoList.length - 1) {
                 navigatePhoto(1); // Swipe left = next
-            } else {
+            } else if (deltaX > 0 && window.currentPhotoIndex > 0) {
                 navigatePhoto(-1); // Swipe right = previous
             }
         }
-    }
+
+        isSwiping = false;
+        isScrollBlocked = false;
+        touchCurrentX = touchStartX;
+    }, { passive: true });
+
+    // Prevent momentum scrolling on modal
+    modalElement.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+    }, { passive: false });
 }
 
 async function handleFileSelect(e) {
@@ -1269,7 +1298,7 @@ async function setupBiometric(password) {
         const credential = await navigator.credentials.create({
             publicKey: {
                 challenge,
-                rp: { name: "Umbra" },
+                rp: { name: "Umbra Ark" },
                 user: {
                     id: userId,
                     name: window.currentUsername || "user",
@@ -1352,7 +1381,7 @@ if (savedUsername && savedHash) {
         }
     })();
 } else {
-    document.getElementById('authTitle').textContent = 'Welcome to Umbra';
+    document.getElementById('authTitle').textContent = 'Welcome to Umbra Ark';
     document.getElementById('authSubtitle').textContent = 'Create your encrypted vault';
     document.getElementById('passwordForm').classList.add('hidden');
     document.getElementById('setupForm').classList.remove('hidden');
