@@ -932,84 +932,184 @@ function setupEventListeners() {
         }
     });
     
-    // Touch swipe for modal with smooth animations
+    // Touch swipe for modal with smooth animations and pinch-to-zoom
     let touchStartX = 0;
     let touchStartY = 0;
     let touchCurrentX = 0;
     let isSwiping = false;
     let isScrollBlocked = false;
+    let initialDistance = 0;
+    let currentScale = 1;
+    let isPinching = false;
 
     const modalElement = document.getElementById('imageModal');
     const modalImgWrapper = document.querySelector('.modal-img-wrapper');
+    const modalImg = document.getElementById('modalImg');
+
+    // Get distance between two touch points
+    function getTouchDistance(e) {
+        if (e.touches.length < 2) return 0;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 
     // Prevent all scrolling on modal
     modalElement.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].clientX;
-        touchStartY = e.changedTouches[0].clientY;
-        touchCurrentX = touchStartX;
-        isSwiping = false;
-        isScrollBlocked = false;
+        if (e.touches.length === 2) {
+            // Pinch zoom start
+            isPinching = true;
+            initialDistance = getTouchDistance(e);
+            if (modalImgWrapper) {
+                modalImgWrapper.style.transition = 'none';
+            }
+        } else if (e.touches.length === 1) {
+            // Swipe start
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
+            touchCurrentX = touchStartX;
+            isSwiping = false;
+            isScrollBlocked = false;
+            isPinching = false;
 
-        // Remove transition for immediate feedback
-        if (modalImgWrapper) {
-            modalImgWrapper.style.transition = 'none';
+            // Remove transition for immediate feedback
+            if (modalImgWrapper && currentScale === 1) {
+                modalImgWrapper.style.transition = 'none';
+            }
         }
     }, { passive: true });
 
     modalElement.addEventListener('touchmove', (e) => {
-        const currentX = e.changedTouches[0].clientX;
-        const currentY = e.changedTouches[0].clientY;
-        const deltaX = Math.abs(currentX - touchStartX);
-        const deltaY = Math.abs(currentY - touchStartY);
+        if (e.touches.length === 2 && isPinching) {
+            // Pinch zoom
+            e.preventDefault();
+            const distance = getTouchDistance(e);
+            const scale = (distance / initialDistance) * currentScale;
+            const clampedScale = Math.max(1, Math.min(4, scale));
 
-        // Determine swipe direction on first significant movement
-        if (!isScrollBlocked && (deltaX > 5 || deltaY > 5)) {
-            if (deltaX > deltaY) {
-                isSwiping = true;
-                isScrollBlocked = true;
-            } else {
-                isScrollBlocked = true;
+            if (modalImg) {
+                modalImg.style.transform = `scale(${clampedScale})`;
+                modalImg.style.transformOrigin = 'center center';
             }
-        }
+            if (modalImgWrapper) {
+                modalImgWrapper.classList.toggle('zoomed', clampedScale > 1);
+            }
+        } else if (e.touches.length === 1 && !isPinching && currentScale === 1) {
+            // Swipe
+            const currentX = e.changedTouches[0].clientX;
+            const currentY = e.changedTouches[0].clientY;
+            const deltaX = Math.abs(currentX - touchStartX);
+            const deltaY = Math.abs(currentY - touchStartY);
 
-        // Always prevent scrolling in modal
-        e.preventDefault();
-        e.stopPropagation();
+            // Determine swipe direction on first significant movement
+            if (!isScrollBlocked && (deltaX > 5 || deltaY > 5)) {
+                if (deltaX > deltaY) {
+                    isSwiping = true;
+                    isScrollBlocked = true;
+                } else {
+                    isScrollBlocked = true;
+                }
+            }
 
-        // Apply real-time drag effect for horizontal swipes
-        if (isSwiping && modalImgWrapper) {
-            touchCurrentX = currentX;
-            const offset = currentX - touchStartX;
-            // Apply drag with slight resistance
-            const dragAmount = offset * 0.5;
-            modalImgWrapper.style.transform = `translateX(${dragAmount}px)`;
-            modalImgWrapper.style.opacity = 1 - Math.abs(offset) / 1000;
+            // Always prevent scrolling in modal
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Apply real-time drag effect for horizontal swipes
+            if (isSwiping && modalImgWrapper) {
+                touchCurrentX = currentX;
+                const offset = currentX - touchStartX;
+                // Full 1:1 drag for smooth feel
+                modalImgWrapper.style.transform = `translateX(${offset}px)`;
+                // Subtle opacity fade
+                modalImgWrapper.style.opacity = 1 - Math.abs(offset) / 1500;
+            }
+        } else {
+            e.preventDefault();
         }
     }, { passive: false });
 
     modalElement.addEventListener('touchend', (e) => {
-        const deltaX = touchCurrentX - touchStartX;
-        const swipeThreshold = 75;
+        if (isPinching && e.touches.length < 2) {
+            // End pinch zoom
+            const finalScale = parseFloat(modalImg.style.transform.replace(/[^0-9.]/g, '')) || 1;
+            currentScale = Math.max(1, Math.min(4, finalScale));
 
+            if (currentScale === 1 && modalImg) {
+                modalImg.style.transform = '';
+                modalImgWrapper.classList.remove('zoomed');
+            }
+
+            isPinching = false;
+            initialDistance = 0;
+        } else if (!isPinching && currentScale === 1) {
+            // End swipe
+            const deltaX = touchCurrentX - touchStartX;
+            const swipeThreshold = 60;
+
+            if (modalImgWrapper) {
+                // Smooth sweep animation
+                modalImgWrapper.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+
+                // Navigate if swipe threshold met
+                if (isSwiping && Math.abs(deltaX) > swipeThreshold) {
+                    const direction = deltaX < 0 ? 1 : -1;
+                    const canNavigate = (direction === 1 && window.currentPhotoIndex < window.currentPhotoList.length - 1) ||
+                                      (direction === -1 && window.currentPhotoIndex > 0);
+
+                    if (canNavigate) {
+                        // Animate out completely
+                        const screenWidth = window.innerWidth;
+                        modalImgWrapper.style.transform = `translateX(${-direction * screenWidth}px)`;
+                        modalImgWrapper.style.opacity = '0';
+
+                        // Navigate after animation
+                        setTimeout(() => {
+                            navigatePhoto(direction);
+                            // Reset from opposite side
+                            modalImgWrapper.style.transition = 'none';
+                            modalImgWrapper.style.transform = `translateX(${direction * screenWidth}px)`;
+                            modalImgWrapper.style.opacity = '0';
+
+                            // Sweep in
+                            setTimeout(() => {
+                                modalImgWrapper.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+                                modalImgWrapper.style.transform = '';
+                                modalImgWrapper.style.opacity = '';
+                            }, 20);
+                        }, 350);
+                    } else {
+                        // Bounce back if can't navigate
+                        modalImgWrapper.style.transform = '';
+                        modalImgWrapper.style.opacity = '';
+                    }
+                } else {
+                    // Didn't swipe enough, bounce back
+                    modalImgWrapper.style.transform = '';
+                    modalImgWrapper.style.opacity = '';
+                }
+            }
+
+            isSwiping = false;
+            isScrollBlocked = false;
+            touchCurrentX = touchStartX;
+        }
+    }, { passive: true });
+
+    // Reset zoom when closing modal
+    const originalCloseModal = window.closeModal;
+    window.closeModal = function() {
+        currentScale = 1;
+        if (modalImg) {
+            modalImg.style.transform = '';
+        }
         if (modalImgWrapper) {
-            modalImgWrapper.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+            modalImgWrapper.classList.remove('zoomed');
             modalImgWrapper.style.transform = '';
             modalImgWrapper.style.opacity = '';
         }
-
-        // Navigate if swipe threshold met
-        if (isSwiping && Math.abs(deltaX) > swipeThreshold) {
-            if (deltaX < 0 && window.currentPhotoIndex < window.currentPhotoList.length - 1) {
-                navigatePhoto(1); // Swipe left = next
-            } else if (deltaX > 0 && window.currentPhotoIndex > 0) {
-                navigatePhoto(-1); // Swipe right = previous
-            }
-        }
-
-        isSwiping = false;
-        isScrollBlocked = false;
-        touchCurrentX = touchStartX;
-    }, { passive: true });
+        originalCloseModal();
+    };
 
     // Prevent all scrolling on document body when modal is active
     const preventBodyScroll = (e) => {
