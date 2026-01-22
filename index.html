@@ -756,10 +756,15 @@
             <!-- Password Form -->
             <div id="passwordForm">
                 <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="username" placeholder="Enter your username" autocomplete="username" autofocus>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" class="form-input" id="password" placeholder="Enter your password" autofocus>
+                    <input type="password" class="form-input" id="password" placeholder="Enter your password" autocomplete="current-password">
                 </div>
                 <button class="btn btn-primary" style="width: 100%;" onclick="login()">Unlock Vault</button>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="switchToSignup()">Create New Account</button>
                 <button class="btn btn-secondary hidden" style="width: 100%; margin-top: 0.75rem;" id="biometricBtn" onclick="loginWithBiometric()">
                     🔐 Use Face ID / Touch ID
                 </button>
@@ -768,10 +773,19 @@
             <!-- Setup Form -->
             <div id="setupForm" class="hidden">
                 <div class="form-group">
-                    <label class="form-label">Create Password</label>
-                    <input type="password" class="form-input" id="setupPassword" placeholder="Choose a strong password">
+                    <label class="form-label">Choose Username</label>
+                    <input type="text" class="form-input" id="setupUsername" placeholder="Enter username (3+ characters)" autocomplete="username">
                 </div>
-                <button class="btn btn-primary" style="width: 100%;" onclick="initializeWithPassword()">Create Vault</button>
+                <div class="form-group">
+                    <label class="form-label">Create Password</label>
+                    <input type="password" class="form-input" id="setupPassword" placeholder="Choose a strong password" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" id="setupPasswordConfirm" placeholder="Re-enter password" autocomplete="new-password">
+                </div>
+                <button class="btn btn-primary" style="width: 100%;" onclick="initializeWithPassword()">Create Account</button>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="switchToLogin()">Back to Login</button>
                 <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">
                     Your password encrypts all photos. Never forget it!
                 </p>
@@ -909,24 +923,70 @@
         window.currentFolder = 'All Photos';
         window.folders = ['All Photos'];
         window.currentPhotoId = null;
+        window.currentUsername = null;
+
+        // Switch between login and signup
+        window.switchToSignup = function() {
+            document.getElementById('authTitle').textContent = 'Create Account';
+            document.getElementById('authSubtitle').textContent = 'Choose a username and password';
+            document.getElementById('passwordForm').classList.add('hidden');
+            document.getElementById('setupForm').classList.remove('hidden');
+        };
+
+        window.switchToLogin = function() {
+            document.getElementById('authTitle').textContent = 'Welcome Back';
+            document.getElementById('authSubtitle').textContent = 'Enter your credentials to unlock';
+            document.getElementById('setupForm').classList.add('hidden');
+            document.getElementById('passwordForm').classList.remove('hidden');
+        };
 
         // Initialize with password
         window.initializeWithPassword = async function() {
+            const username = document.getElementById('setupUsername').value.trim().toLowerCase();
             const password = document.getElementById('setupPassword').value;
-            if (!password) {
-                alert('Please enter a password');
+            const confirmPassword = document.getElementById('setupPasswordConfirm').value;
+
+            if (!username || username.length < 3) {
+                alert('Username must be at least 3 characters');
+                return;
+            }
+
+            if (!password || password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
                 return;
             }
 
             try {
                 window.app = window.initializeApp(window.FIREBASE_CONFIG);
-                window.storage = window.window.getStorage(window.app);
-                window.db = window.window.getFirestore(window.app);
-                window.encryptionKey = await deriveKey(password);
+                window.storage = window.getStorage(window.app);
+                window.db = window.getFirestore(window.app);
 
+                // Check if username exists
+                const userDoc = await window.getDoc(window.doc(window.db, 'users', username));
+                if (userDoc.exists()) {
+                    alert('Username already taken. Please choose another.');
+                    return;
+                }
+
+                // Create user account in Firestore
                 const passwordHash = await hashPassword(password);
+                await window.setDoc(window.doc(window.db, 'users', username), {
+                    passwordHash: passwordHash,
+                    createdAt: new Date().toISOString(),
+                    photoCount: 0
+                });
+
+                window.encryptionKey = await deriveKey(password);
+                window.currentUsername = username;
+
+                // Store credentials for auto-login
+                localStorage.setItem('username', username);
                 localStorage.setItem('passwordHash', passwordHash);
-                localStorage.setItem('vaultInitialized', 'true');
 
                 // Offer biometric
                 if (await isBiometricAvailable()) {
@@ -966,25 +1026,46 @@
 
         // Login
         window.login = async function() {
+            const username = document.getElementById('username').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
+
+            if (!username) {
+                alert('Please enter username');
+                return;
+            }
+
             if (!password) {
                 alert('Please enter password');
                 return;
             }
 
             try {
-                const passwordHash = await hashPassword(password);
-                const storedHash = localStorage.getItem('passwordHash');
+                window.app = window.initializeApp(window.FIREBASE_CONFIG);
+                window.storage = window.getStorage(window.app);
+                window.db = window.getFirestore(window.app);
+
+                // Get user from Firestore
+                const userDoc = await window.getDoc(window.doc(window.db, 'users', username));
                 
-                if (passwordHash !== storedHash) {
+                if (!userDoc.exists()) {
+                    alert('Username not found. Please sign up first.');
+                    return;
+                }
+
+                const userData = userDoc.data();
+                const passwordHash = await hashPassword(password);
+                
+                if (passwordHash !== userData.passwordHash) {
                     alert('Incorrect password');
                     return;
                 }
 
-                window.app = window.initializeApp(window.FIREBASE_CONFIG);
-                window.storage = window.getStorage(window.app);
-                window.db = window.getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
+                window.currentUsername = username;
+
+                // Store credentials for auto-login
+                localStorage.setItem('username', username);
+                localStorage.setItem('passwordHash', passwordHash);
 
                 showVault();
                 await loadPhotos();
@@ -1274,7 +1355,7 @@
                     const photo = window.photos[i];
                     progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
 
-                    const photoRef = window.ref(window.storage, `photos/${photo.id}.enc`);
+                    const photoRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photo.id}.enc`);
                     const blob = await window.getBlob(photoRef);
                     const encryptedArray = new Uint8Array(await blob.arrayBuffer());
 
@@ -1304,6 +1385,12 @@
 
                 const newPasswordHash = await hashPassword(newPassword);
                 localStorage.setItem('passwordHash', newPasswordHash);
+                
+                // Update password hash in Firestore
+                await window.setDoc(window.doc(window.db, 'users', window.currentUsername), {
+                    passwordHash: newPasswordHash,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
                 window.encryptionKey = newKey;
 
                 const biometricDataStr = localStorage.getItem('biometricAuth');
@@ -1325,12 +1412,14 @@
             }
         };
 
-        // Check if vault is initialized
-        const isInitialized = localStorage.getItem('vaultInitialized') === 'true';
+        // Check for saved credentials
+        const savedUsername = localStorage.getItem('username');
+        const savedHash = localStorage.getItem('passwordHash');
 
-        if (isInitialized) {
+        if (savedUsername && savedHash) {
             document.getElementById('authTitle').textContent = 'Welcome Back';
-            document.getElementById('authSubtitle').textContent = 'Enter your password to unlock';
+            document.getElementById('authSubtitle').textContent = `Login as ${savedUsername}`;
+            document.getElementById('username').value = savedUsername;
             
             // Check for biometric
             (async () => {
@@ -1341,8 +1430,9 @@
                 }
             })();
         } else {
-            document.getElementById('authTitle').textContent = 'Create Vault';
-            document.getElementById('authSubtitle').textContent = 'Choose a secure password';
+            // Show signup form
+            document.getElementById('authTitle').textContent = 'Create Account';
+            document.getElementById('authSubtitle').textContent = 'Choose a username and password';
             document.getElementById('passwordForm').classList.add('hidden');
             document.getElementById('setupForm').classList.remove('hidden');
         }
@@ -1509,11 +1599,13 @@
                     const photoId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                     const folder = window.currentFolder || 'All Photos';
                     
-                    const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                    // User-specific storage path
+                    const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photoId}.enc`);
                     await window.uploadBytes(storageRef, encryptedData);
                     const downloadURL = await window.getDownloadURL(storageRef);
                     
-                    await window.setDoc(window.doc(window.db, 'photos', photoId), {
+                    // User-specific Firestore subcollection
+                    await window.setDoc(window.doc(window.db, 'users', window.currentUsername, 'photos', photoId), {
                         id: photoId,
                         name: file.name,
                         size: file.size,
@@ -1548,11 +1640,16 @@
 
         async function loadPhotos() {
             try {
-                const querySnapshot = await window.getDocs(window.collection(window.db, 'photos'));
+                if (!window.currentUsername) {
+                    console.error('No username set');
+                    return;
+                }
+
+                const querySnapshot = await window.getDocs(window.collection(window.db, 'users', window.currentUsername, 'photos'));
                 
                 window.photos = [];
                 querySnapshot.forEach((doc) => {
-                    window.photos.push(doc.data());
+                    window.photos.push({...doc.data(), id: doc.id});
                 });
 
                 updateFolders();
@@ -1733,7 +1830,8 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                // User-specific storage path
+                const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photoId}.enc`);
                 const blob = await window.getBlob(storageRef);
                 
                 const encryptedArray = new Uint8Array(await blob.arrayBuffer());
@@ -1765,7 +1863,8 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                // User-specific storage path
+                const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photoId}.enc`);
                 const blob = await window.getBlob(storageRef);
                 
                 const encryptedArray = new Uint8Array(await blob.arrayBuffer());
@@ -1801,10 +1900,12 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
                 
-                const storageRef = window.ref(window.storage, `photos/${photoId}.enc`);
+                // User-specific storage path
+                const storageRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photoId}.enc`);
                 await window.deleteObject(storageRef);
                 
-                await window.deleteDoc(window.doc(window.db, 'photos', photoId));
+                // User-specific Firestore subcollection
+                await window.deleteDoc(window.doc(window.db, 'users', window.currentUsername, 'photos', photoId));
                 
                 window.photos = window.photos.filter(p => p.id !== photoId);
                 
@@ -2100,7 +2201,7 @@
                     const photo = window.photos[i];
                     progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
 
-                    const photoRef = window.ref(window.storage, `photos/${photo.id}.enc`);
+                    const photoRef = window.ref(window.storage, `users/${window.currentUsername}/photos/${photo.id}.enc`);
                     const blob = await window.getBlob(photoRef);
                     const encryptedArray = new Uint8Array(await blob.arrayBuffer());
 
