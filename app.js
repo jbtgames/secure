@@ -907,25 +907,57 @@ function setupEventListeners() {
     
     // Touch swipe for modal
     let touchStartX = 0;
+    let touchStartY = 0;
     let touchEndX = 0;
-    
+    let touchEndY = 0;
+    let isSwiping = false;
+
     const modal = document.getElementById('imageModal');
+
     modal.addEventListener('touchstart', (e) => {
         touchStartX = e.changedTouches[0].screenX;
-    });
-    
+        touchStartY = e.changedTouches[0].screenY;
+        isSwiping = false;
+    }, { passive: true });
+
+    modal.addEventListener('touchmove', (e) => {
+        if (!isSwiping) {
+            const touchCurrentX = e.changedTouches[0].screenX;
+            const touchCurrentY = e.changedTouches[0].screenY;
+            const deltaX = Math.abs(touchCurrentX - touchStartX);
+            const deltaY = Math.abs(touchCurrentY - touchStartY);
+
+            // If horizontal movement is greater than vertical, it's a swipe
+            if (deltaX > deltaY && deltaX > 10) {
+                isSwiping = true;
+            }
+        }
+
+        // Prevent scrolling when horizontal swiping
+        if (isSwiping) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
     modal.addEventListener('touchend', (e) => {
         touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
         handleSwipe();
-    });
-    
+        isSwiping = false;
+    }, { passive: true });
+
     function handleSwipe() {
         const swipeThreshold = 50;
-        if (touchEndX < touchStartX - swipeThreshold) {
-            navigatePhoto(1); // Swipe left = next
-        }
-        if (touchEndX > touchStartX + swipeThreshold) {
-            navigatePhoto(-1); // Swipe right = previous
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = Math.abs(touchEndY - touchStartY);
+
+        // Only trigger navigation if horizontal movement is dominant
+        if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaX) > deltaY) {
+            if (deltaX < 0) {
+                navigatePhoto(1); // Swipe left = next
+            } else {
+                navigatePhoto(-1); // Swipe right = previous
+            }
         }
     }
 }
