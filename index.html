@@ -1358,7 +1358,7 @@
             return crypto.subtle.deriveKey(
                 {
                     name: 'PBKDF2',
-                    salt: encoder.encode('securevault-v2'),
+                    salt: encoder.encode('securevault-firebase-v1'),
                     iterations: 100000,
                     hash: 'SHA-256'
                 },
