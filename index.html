@@ -2,243 +2,305 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureVault - Cloud Encrypted Photo Storage</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SecureVault</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --midnight: #0a0e27;
-            --deep-blue: #1a1f3a;
-            --slate: #2d3348;
-            --silver: #a8b2d1;
-            --ice: #ccd6f6;
-            --cyan: #64ffda;
-            --amber: #ffd700;
-            --red: #ff6b6b;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-primary: #0B0F19;
+            --bg-secondary: #131824;
+            --bg-tertiary: #1A2030;
+            --accent: #6366F1;
+            --accent-light: #818CF8;
+            --accent-dark: #4F46E5;
+            --text-primary: #F9FAFB;
+            --text-secondary: #9CA3AF;
+            --text-muted: #6B7280;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: rgba(0, 0, 0, 0.3);
         }
 
         body {
-            font-family: 'Crimson Pro', serif;
-            background: linear-gradient(135deg, var(--midnight) 0%, var(--deep-blue) 100%);
-            color: var(--ice);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
-            position: relative;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(100, 255, 218, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(255, 215, 0, 0.02) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
+        /* Mobile-first container */
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            z-index: 1;
+            max-width: 100%;
+            padding: 0;
+            min-height: 100vh;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-            animation: fadeInDown 0.8s ease;
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
-        h1 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5rem;
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.9375rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, var(--cyan), var(--amber));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.02em;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        .tagline {
-            font-size: 1.1rem;
-            color: var(--silver);
-            font-weight: 300;
-            letter-spacing: 0.05em;
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:active {
+            background: var(--bg-secondary);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 0.625rem 1rem;
+        }
+
+        .btn-ghost:active {
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-icon {
+            padding: 0.625rem;
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Auth Screen */
+        .auth-screen {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px var(--shadow);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-subtitle {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
         }
 
         .security-badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            margin-top: 1rem;
             padding: 0.5rem 1rem;
-            background: rgba(100, 255, 218, 0.1);
-            border: 1px solid rgba(100, 255, 218, 0.2);
-            border-radius: 50px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--cyan);
-            animation: pulse 2s ease-in-out infinite;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 100px;
+            font-size: 0.8125rem;
+            color: var(--accent-light);
+            margin-top: 1rem;
         }
 
-        .security-badge::before {
-            content: '🔒';
-        }
-
-        .auth-section {
-            max-width: 500px;
-            margin: 0 auto 3rem;
-            background: rgba(26, 31, 58, 0.5);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(168, 178, 209, 0.1);
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: fadeInUp 0.8s ease 0.2s backwards;
-        }
-
-        .auth-section h2 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.3rem;
-            margin-bottom: 1.5rem;
-            color: var(--cyan);
-            text-align: center;
-        }
-
+        /* Form Elements */
         .form-group {
             margin-bottom: 1.5rem;
         }
 
-        label {
+        .form-label {
             display: block;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
             margin-bottom: 0.5rem;
-            color: var(--silver);
-            letter-spacing: 0.05em;
         }
 
-        input[type="text"],
-        input[type="password"],
-        textarea {
-            width: 100%;
-            padding: 0.9rem 1.2rem;
-            background: rgba(10, 14, 39, 0.6);
-            border: 1px solid rgba(168, 178, 209, 0.2);
-            border-radius: 8px;
-            color: var(--ice);
-            font-size: 1rem;
-            font-family: 'Crimson Pro', serif;
-            transition: all 0.3s ease;
-        }
-
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--cyan);
-            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.1);
-        }
-
-        .btn {
+        .form-input {
             width: 100%;
             padding: 1rem;
-            background: linear-gradient(135deg, var(--cyan), #52d4b8);
-            border: none;
-            border-radius: 8px;
-            color: var(--midnight);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(100, 255, 218, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--slate), var(--deep-blue));
-            color: var(--ice);
-            margin-top: 0.5rem;
-        }
-
-        .vault-section {
-            display: none;
-            animation: fadeInUp 0.8s ease;
-        }
-
-        .vault-section.active {
-            display: block;
-        }
-
-        .folder-nav {
-            background: rgba(26, 31, 58, 0.5);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(168, 178, 209, 0.1);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
             border-radius: 12px;
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 0.875rem;
+        }
+
+        /* Main Content */
+        .main-content {
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Folder Navigation */
+        .folder-nav {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
         }
 
         .folder-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             margin-bottom: 1rem;
         }
 
-        .folder-header h3 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.1rem;
-            color: var(--cyan);
-            margin: 0;
-        }
-
-        .btn-new-folder {
-            padding: 0.6rem 1.2rem;
-            background: linear-gradient(135deg, var(--cyan), #52d4b8);
-            border: none;
-            border-radius: 6px;
-            color: var(--midnight);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
+        .folder-title {
+            font-size: 1rem;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-new-folder:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(100, 255, 218, 0.3);
+            color: var(--text-primary);
         }
 
         .folder-list {
@@ -247,157 +309,144 @@
             flex-wrap: wrap;
         }
 
-        .folder-item {
-            padding: 0.6rem 1rem;
-            background: rgba(45, 51, 72, 0.6);
-            border: 1px solid rgba(168, 178, 209, 0.2);
-            border-radius: 8px;
-            color: var(--ice);
-            font-family: 'Crimson Pro', serif;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
+        .folder-chip {
+            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        .folder-item:hover {
-            background: rgba(100, 255, 218, 0.1);
-            border-color: var(--cyan);
+        .folder-chip:active {
+            transform: scale(0.95);
         }
 
-        .folder-item.active {
-            background: linear-gradient(135deg, var(--cyan), #52d4b8);
-            color: var(--midnight);
-            border-color: var(--cyan);
+        .folder-chip.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-color: var(--accent);
+            color: white;
         }
 
         .folder-count {
-            font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
             opacity: 0.7;
         }
 
+        /* Upload Area */
         .upload-area {
-            background: rgba(26, 31, 58, 0.5);
-            backdrop-filter: blur(20px);
-            border: 2px dashed rgba(100, 255, 218, 0.3);
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
             border-radius: 16px;
-            padding: 3rem;
+            padding: 2rem;
             text-align: center;
-            margin-bottom: 3rem;
-            transition: all 0.3s ease;
             cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 1.5rem;
         }
 
-        .upload-area:hover {
-            border-color: var(--cyan);
-            background: rgba(100, 255, 218, 0.05);
+        .upload-area:active {
+            transform: scale(0.98);
         }
 
         .upload-area.dragover {
-            border-color: var(--cyan);
-            background: rgba(100, 255, 218, 0.1);
-            transform: scale(1.02);
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
         }
 
         .upload-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
         }
 
         .upload-text {
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-            color: var(--ice);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
         }
 
-        .upload-subtext {
-            font-size: 0.9rem;
-            color: var(--silver);
-            font-family: 'JetBrains Mono', monospace;
+        .upload-hint {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
-        input[type="file"] {
-            display: none;
-        }
-
+        /* Photo Grid */
         .photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 1rem;
-            animation: fadeIn 0.8s ease;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @media (min-width: 640px) {
+            .photo-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
         }
 
         .photo-card {
-            background: rgba(26, 31, 58, 0.5);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(168, 178, 209, 0.1);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
-            transition: all 0.3s ease;
-            animation: scaleIn 0.5s ease backwards;
+            transition: all 0.2s ease;
+            animation: scaleIn 0.3s ease backwards;
         }
 
-        .photo-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
-            border-color: rgba(100, 255, 218, 0.3);
+        .photo-card:active {
+            transform: scale(0.95);
         }
 
-        .photo-img-wrapper {
+        .photo-thumbnail {
             position: relative;
             width: 100%;
             aspect-ratio: 1;
             overflow: hidden;
-            background: var(--slate);
+            background: var(--bg-tertiary);
             cursor: pointer;
-            transition: opacity 0.2s ease;
         }
 
-        .photo-img-wrapper:hover {
-            opacity: 0.9;
-        }
-
-        .photo-img-bg {
+        .photo-bg {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             background-size: cover;
             background-position: center;
             filter: blur(20px);
             transform: scale(1.1);
-            opacity: 0.6;
+            opacity: 0.4;
         }
 
-        .photo-img-main {
+        .photo-img {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
             z-index: 1;
         }
 
-        .photo-img-placeholder {
+        .photo-placeholder {
             width: 100%;
             aspect-ratio: 1;
-            background: var(--slate);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--silver);
-            font-size: 2.5rem;
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-        }
-
-        .photo-img-placeholder:hover {
-            opacity: 0.8;
+            font-size: 2rem;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
         }
 
         .photo-info {
@@ -405,9 +454,10 @@
         }
 
         .photo-name {
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
-            color: var(--ice);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.375rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -417,248 +467,201 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            color: var(--silver);
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
 
-        .btn-more {
-            background: none;
-            border: none;
-            color: var(--cyan);
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            font-weight: bold;
-            line-height: 1;
-        }
-
-        .btn-more:hover {
-            background: rgba(100, 255, 218, 0.1);
-        }
-
-        .photo-actions {
-            display: flex;
-            gap: 0.4rem;
-            margin-top: 0.6rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-small {
-            flex: 1;
-            min-width: 60px;
-            padding: 0.4rem;
-            font-size: 0.7rem;
-            border-radius: 6px;
-        }
-
-        .btn-delete {
-            background: linear-gradient(135deg, var(--red), #cc5555);
-        }
-
-        .btn-download {
-            background: linear-gradient(135deg, var(--amber), #e6c200);
-        }
-
-        .stats {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .stat-card {
-            background: rgba(26, 31, 58, 0.5);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(168, 178, 209, 0.1);
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
-            text-align: center;
-            min-width: 180px;
-        }
-
-        .stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--cyan);
-            margin-bottom: 0.3rem;
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--silver);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .logout-btn {
+        /* Action Sheet */
+        .action-sheet {
             position: fixed;
-            top: 2rem;
-            right: 2rem;
-            padding: 0.8rem 1.5rem;
-            background: rgba(255, 107, 107, 0.2);
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            border-radius: 8px;
-            color: var(--red);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 100;
-        }
-
-        .logout-btn:hover {
-            background: rgba(255, 107, 107, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--cyan);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(100, 255, 218, 0.2);
-            border-top-color: var(--cyan);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
+            bottom: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .action-sheet.active {
+            transform: translateY(0);
+        }
+
+        .action-sheet-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 199;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .action-sheet-backdrop.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .action-sheet-content {
+            background: var(--bg-secondary);
+            border-radius: 20px 20px 0 0;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .action-sheet-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 100px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .action-sheet-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-item:active {
+            transform: scale(0.98);
+        }
+
+        .action-item.danger {
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .action-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            display: none;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.3s ease;
+            padding: 1.5rem;
+            background: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
         .modal.active {
             display: flex;
+            animation: fadeIn 0.2s ease;
         }
 
         .modal-content {
+            position: relative;
             max-width: 90%;
             max-height: 90vh;
-            position: relative;
-            animation: scaleIn 0.3s ease;
+            animation: scaleIn 0.2s ease;
         }
 
         .modal-img {
             max-width: 100%;
             max-height: 90vh;
-            border-radius: 12px;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
-            display: block;
-            margin: 0 auto;
+            border-radius: 16px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
         }
 
         .modal-close {
             position: absolute;
-            top: -3rem;
+            top: -3.5rem;
             right: 0;
-            background: rgba(255, 107, 107, 0.2);
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            color: var(--red);
-            padding: 0.8rem 1.2rem;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.25rem;
             cursor: pointer;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
         }
 
-        .modal-close:hover {
-            background: rgba(255, 107, 107, 0.3);
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
         }
 
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
-            color: var(--silver);
         }
 
         .empty-icon {
-            font-size: 4rem;
+            font-size: 3rem;
             margin-bottom: 1rem;
             opacity: 0.5;
         }
 
         .empty-text {
-            font-size: 1.2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
             margin-bottom: 0.5rem;
+            color: var(--text-primary);
         }
 
-        .info-text {
-            font-size: 0.85rem;
-            color: var(--silver);
-            text-align: center;
-            margin-top: 1rem;
-            font-family: 'JetBrains Mono', monospace;
+        .empty-hint {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
-        .code-block {
-            background: rgba(10, 14, 39, 0.8);
-            border: 1px solid rgba(168, 178, 209, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--cyan);
-            overflow-x: auto;
-        }
-
+        /* Animations */
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         @keyframes scaleIn {
             from {
                 opacity: 0;
-                transform: scale(0.9);
+                transform: scale(0.95);
             }
             to {
                 opacity: 1;
@@ -666,176 +669,208 @@
             }
         }
 
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.7;
-            }
-        }
-
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
+            to { transform: rotate(360deg); }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .safe-area-inset {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Desktop Improvements */
+        @media (min-width: 768px) {
+            .header-content {
+                padding: 1.25rem 2rem;
+            }
+
+            .main-content {
+                padding: 2rem;
+            }
+
+            .auth-card {
+                padding: 2.5rem;
+            }
+
+            .modal-close {
+                top: -4rem;
             }
         }
 
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
+        /* Hide scrollbar but keep functionality */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
 
-            .photo-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 0.75rem;
-            }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
 
-            .stats {
-                flex-direction: column;
-                align-items: center;
-            }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
 
-            .logout-btn {
-                top: 1rem;
-                right: 1rem;
-                padding: 0.6rem 1rem;
-                font-size: 0.75rem;
-            }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>SecureVault</h1>
-            <p class="tagline">Cloud Encrypted Photo Storage</p>
-            <div class="security-badge">Client-Side Encryption • Firebase Cloud Storage</div>
-        </header>
-
-        <!-- Firebase Setup Section -->
-        <div id="setupSection" class="auth-section">
-            <h2>Firebase Setup</h2>
-            <p class="info-text" style="margin-bottom: 1.5rem;">
-                Paste your Firebase configuration from the Firebase Console
-            </p>
-            <div class="form-group">
-                <label>Firebase Config (JSON)</label>
-                <textarea id="firebaseConfig" placeholder='{
-  "apiKey": "...",
-  "authDomain": "...",
-  "projectId": "...",
-  "storageBucket": "...",
-  "messagingSenderId": "...",
-  "appId": "..."
-}'></textarea>
+    <!-- Header -->
+    <div class="header hidden" id="mainHeader">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🔐</div>
+                <span>SecureVault</span>
             </div>
-            <div class="form-group">
-                <label>Encryption Password</label>
-                <input type="password" id="setupPassword" placeholder="Enter secure password">
-            </div>
-            <button class="btn" onclick="initializeFirebase()">Initialize Vault</button>
-            <p class="info-text">
-                <strong>Need help?</strong> Follow the setup guide in the README
-            </p>
-        </div>
-
-        <!-- Authentication Section -->
-        <div id="authSection" class="auth-section" style="display: none;">
-            <h2>Enter Password</h2>
-            <div class="form-group">
-                <label>Encryption Password</label>
-                <input type="password" id="password" placeholder="Enter your password">
-            </div>
-            <button class="btn" onclick="login()">Unlock Vault</button>
-            <div id="biometricOption" style="margin-top: 1rem; display: none;">
-                <button class="btn btn-secondary" onclick="loginWithBiometric()">🔐 Use Face ID / Touch ID</button>
-            </div>
-        </div>
-
-        <button class="logout-btn" id="logoutBtn" style="display: none;" onclick="logout()">Logout</button>
-        <button class="logout-btn" id="changePasswordBtn" style="display: none; right: 10rem;" onclick="showChangePassword()">Change Password</button>
-
-        <!-- Vault Section -->
-        <div id="vaultSection" class="vault-section">
-            <div class="folder-nav">
-                <div class="folder-header">
-                    <h3>📁 <span id="currentFolderName">All Photos</span></h3>
-                    <button class="btn-new-folder" onclick="createNewFolder()">+ New Folder</button>
-                </div>
-                <div id="folderList" class="folder-list"></div>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-value" id="photoCount">0</div>
-                    <div class="stat-label">Photos Stored</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalSize">0 MB</div>
-                    <div class="stat-label">Total Size</div>
-                </div>
-            </div>
-
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📤</div>
-                <div class="upload-text">Drop photos here or click to upload</div>
-                <div class="upload-subtext">Images encrypted before cloud upload</div>
-                <input type="file" id="fileInput" accept="image/*" multiple>
-            </div>
-
-            <div id="photoGrid" class="photo-grid"></div>
-            <div id="emptyState" class="empty-state">
-                <div class="empty-icon">🔐</div>
-                <div class="empty-text">Your vault is empty</div>
-                <div class="upload-subtext">Upload your first encrypted photo to get started</div>
+            <div class="header-actions">
+                <button class="btn btn-ghost btn-icon" onclick="showChangePassword()" title="Change Password">⚙️</button>
+                <button class="btn btn-ghost btn-icon" onclick="logout()" title="Logout">⎋</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal for viewing photos -->
-    <div id="modal" class="modal">
+    <!-- Auth Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo" style="justify-content: center; margin-bottom: 1rem;">
+                    <div class="logo-icon">🔐</div>
+                    <span>SecureVault</span>
+                </div>
+                <h1 class="auth-title" id="authTitle">Welcome Back</h1>
+                <p class="auth-subtitle" id="authSubtitle">Enter your password to unlock</p>
+                <div class="security-badge">
+                    🔒 End-to-end encrypted
+                </div>
+            </div>
+
+            <!-- Password Form -->
+            <div id="passwordForm">
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="password" placeholder="Enter your password" autofocus>
+                </div>
+                <button class="btn btn-primary" style="width: 100%;" onclick="login()">Unlock Vault</button>
+                <button class="btn btn-secondary hidden" style="width: 100%; margin-top: 0.75rem;" id="biometricBtn" onclick="loginWithBiometric()">
+                    🔐 Use Face ID / Touch ID
+                </button>
+            </div>
+
+            <!-- Setup Form -->
+            <div id="setupForm" class="hidden">
+                <div class="form-group">
+                    <label class="form-label">Create Password</label>
+                    <input type="password" class="form-input" id="setupPassword" placeholder="Choose a strong password">
+                </div>
+                <button class="btn btn-primary" style="width: 100%;" onclick="initializeWithPassword()">Create Vault</button>
+                <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">
+                    Your password encrypts all photos. Never forget it!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content hidden" id="mainContent">
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value" id="photoCount">0</div>
+                <div class="stat-label">Photos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalSize">0 MB</div>
+                <div class="stat-label">Storage</div>
+            </div>
+        </div>
+
+        <!-- Folders -->
+        <div class="folder-nav">
+            <div class="folder-header">
+                <div class="folder-title">📁 <span id="currentFolderName">All Photos</span></div>
+                <button class="btn btn-ghost btn-icon" onclick="createNewFolder()">+</button>
+            </div>
+            <div class="folder-list" id="folderList"></div>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">Tap to upload photos</div>
+            <div class="upload-hint">Or drag and drop files here</div>
+            <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+        </div>
+
+        <!-- Photo Grid -->
+        <div class="photo-grid" id="photoGrid"></div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📸</div>
+            <div class="empty-text">No photos yet</div>
+            <div class="empty-hint">Tap the upload area to add your first photo</div>
+        </div>
+    </div>
+
+    <!-- Action Sheet -->
+    <div class="action-sheet-backdrop" id="actionBackdrop" onclick="closeActionSheet()"></div>
+    <div class="action-sheet" id="actionSheet">
+        <div class="action-sheet-content safe-area-inset">
+            <div class="action-sheet-handle"></div>
+            <div class="action-sheet-title" id="actionSheetTitle">Photo Actions</div>
+            <div class="action-list" id="actionList"></div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">Close ✕</button>
-            <img id="modalImg" class="modal-img" src="" alt="Full size photo">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <img class="modal-img" id="modalImg" src="" alt="Photo">
         </div>
     </div>
 
     <!-- Change Password Modal -->
-    <div id="changePasswordModal" class="modal">
-        <div class="auth-section" style="margin: 0; animation: scaleIn 0.3s ease;">
-            <h2>Change Password</h2>
-            <p class="info-text" style="margin-bottom: 1.5rem; color: var(--amber);">
-                ⚠️ Warning: All photos will be re-encrypted with the new password. This may take a while.
-            </p>
-            <div class="form-group">
-                <label>Current Password</label>
-                <input type="password" id="currentPassword" placeholder="Enter current password">
+    <div class="modal" id="changePasswordModal">
+        <div class="auth-card" style="margin: 0;">
+            <div class="auth-header">
+                <h2 class="auth-title">Change Password</h2>
+                <p class="auth-subtitle">All photos will be re-encrypted</p>
             </div>
             <div class="form-group">
-                <label>New Password</label>
-                <input type="password" id="newPassword" placeholder="Enter new password">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-input" id="currentPassword" placeholder="Enter current password">
             </div>
             <div class="form-group">
-                <label>Confirm New Password</label>
-                <input type="password" id="confirmPassword" placeholder="Re-enter new password">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-input" id="newPassword" placeholder="Enter new password">
             </div>
-            <button class="btn" onclick="changePassword()">Change Password</button>
-            <button class="btn btn-secondary" onclick="closeChangePassword()">Cancel</button>
-            <div id="reencryptProgress" style="display: none; margin-top: 1rem; text-align: center;">
-                <div class="spinner" style="margin: 1rem auto;"></div>
-                <p class="info-text" id="progressText">Re-encrypting photos... 0/0</p>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" class="form-input" id="confirmPassword" placeholder="Re-enter new password">
             </div>
+            <div id="reencryptProgress" class="loading hidden">
+                <div class="spinner"></div>
+                <p id="progressText">Re-encrypting photos...</p>
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="changePassword()">Change Password</button>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="closeChangePassword()">Cancel</button>
         </div>
     </div>
 
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject, getBlob } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // Firebase Configuration - Add your config here
+        // Firebase Configuration
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyDU04h1-gksIzEmKzUlGsni_xYWWrxZp3g",
             authDomain: "vault-4b8d7.firebaseapp.com",
@@ -846,145 +881,89 @@
         };
 
         // Global state
-        window.firebaseApp = null;
+        window.app = null;
         window.storage = null;
         window.db = null;
         window.encryptionKey = null;
         window.photos = [];
         window.currentFolder = 'All Photos';
         window.folders = ['All Photos'];
+        window.currentPhotoId = null;
 
-        // Check if Firebase is configured
-        const isFirebaseConfigured = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+        // Check if vault is initialized
+        const isInitialized = localStorage.getItem('vaultInitialized') === 'true';
 
-        // Initialize Firebase on page load if configured
-        if (isFirebaseConfigured && localStorage.getItem('vaultInitialized') === 'true') {
-            document.getElementById('setupSection').style.display = 'none';
-            document.getElementById('authSection').style.display = 'block';
+        if (isInitialized) {
+            document.getElementById('authTitle').textContent = 'Welcome Back';
+            document.getElementById('authSubtitle').textContent = 'Enter your password to unlock';
             
-            // Check if biometric is available
+            // Check for biometric
             (async () => {
                 const hasBiometric = localStorage.getItem('biometricAuth');
                 const isAvailable = await isBiometricAvailable();
-                
                 if (hasBiometric && isAvailable) {
-                    document.getElementById('biometricOption').style.display = 'block';
+                    document.getElementById('biometricBtn').classList.remove('hidden');
                 }
             })();
-        } else if (!isFirebaseConfigured) {
-            document.getElementById('setupSection').style.display = 'block';
         } else {
-            document.getElementById('setupSection').style.display = 'none';
-            document.getElementById('authSection').style.display = 'none';
-            
-            // Show simple password setup
-            const setupSection = document.getElementById('setupSection');
-            setupSection.style.display = 'block';
-            setupSection.innerHTML = `
-                <h2>Setup Your Vault</h2>
-                <div class="form-group">
-                    <label>Encryption Password</label>
-                    <input type="password" id="setupPassword" placeholder="Enter secure password">
-                </div>
-                <button class="btn" onclick="initializeWithPassword()">Initialize Vault</button>
-                <p class="info-text">Your password encrypts all photos. Never forget it!</p>
-            `;
+            document.getElementById('authTitle').textContent = 'Create Vault';
+            document.getElementById('authSubtitle').textContent = 'Choose a secure password';
+            document.getElementById('passwordForm').classList.add('hidden');
+            document.getElementById('setupForm').classList.remove('hidden');
         }
 
+        // Initialize with password
         window.initializeWithPassword = async function() {
+            const password = document.getElementById('setupPassword').value;
+            if (!password) {
+                alert('Please enter a password');
+                return;
+            }
+
             try {
-                const password = document.getElementById('setupPassword').value;
-
-                if (!password) {
-                    alert('Please enter a password');
-                    return;
-                }
-
-                // Initialize Firebase
-                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.firebaseApp);
-                window.db = getFirestore(window.firebaseApp);
-
-                // Generate encryption key
+                window.app = initializeApp(FIREBASE_CONFIG);
+                window.storage = getStorage(window.app);
+                window.db = getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
 
-                // Store password hash
                 const passwordHash = await hashPassword(password);
                 localStorage.setItem('passwordHash', passwordHash);
                 localStorage.setItem('vaultInitialized', 'true');
 
-                // Offer to setup biometric authentication
+                // Offer biometric
                 if (await isBiometricAvailable()) {
-                    if (confirm('Enable Face ID / Touch ID for faster login?')) {
-                        await setupBiometric(password);
-                    }
+                    const dialog = document.createElement('div');
+                    dialog.className = 'modal active';
+                    dialog.innerHTML = `
+                        <div class="auth-card" style="margin: 0;">
+                            <div class="auth-header">
+                                <h2 class="auth-title">Enable Biometric?</h2>
+                                <p class="auth-subtitle">Use Face ID / Touch ID for faster login</p>
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%;" onclick="enableBiometricConfirm('${password.replace(/'/g, "\\'")}')">Enable</button>
+                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove(); finalizeVaultSetup()">Skip</button>
+                        </div>
+                    `;
+                    document.body.appendChild(dialog);
+                    return; // Wait for user choice
                 }
 
-                console.log('✓ Vault initialized');
-
-                // Show vault
-                document.getElementById('setupSection').style.display = 'none';
-                document.getElementById('vaultSection').classList.add('active');
-                document.getElementById('logoutBtn').style.display = 'block';
-
-                await loadPhotos();
+                finalizeVaultSetup();
             } catch (error) {
                 console.error('Setup error:', error);
                 alert('Setup failed: ' + error.message);
             }
         };
 
-        // Old initializeFirebase for backwards compatibility
-        window.initializeFirebase = async function() {
-            try {
-                const configText = document.getElementById('firebaseConfig').value.trim();
-                const password = document.getElementById('setupPassword').value;
-
-                if (!configText || !password) {
-                    alert('Please provide Firebase config and password');
-                    return;
-                }
-
-                const config = JSON.parse(configText);
-                
-                // Initialize Firebase
-                window.firebaseApp = initializeApp(config);
-                window.storage = getStorage(window.firebaseApp);
-                window.db = getFirestore(window.firebaseApp);
-
-                // Generate encryption key
-                window.encryptionKey = await deriveKey(password);
-
-                // Store config and password hash
-                localStorage.setItem('firebaseConfig', configText);
-                const passwordHash = await hashPassword(password);
-                localStorage.setItem('passwordHash', passwordHash);
-                localStorage.setItem('vaultInitialized', 'true');
-
-                console.log('✓ Firebase initialized');
-
-                // Show vault
-                document.getElementById('setupSection').style.display = 'none';
-                document.getElementById('vaultSection').classList.add('active');
-                document.getElementById('logoutBtn').style.display = 'block';
-
-                await loadPhotos();
-            } catch (error) {
-                console.error('Setup error:', error);
-                alert('Setup failed: ' + error.message);
-            }
-        };
-
+        // Login
         window.login = async function() {
-            try {
-                const password = document.getElementById('password').value;
-                
-                if (!password) {
-                    alert('Please enter password');
-                    return;
-                }
+            const password = document.getElementById('password').value;
+            if (!password) {
+                alert('Please enter password');
+                return;
+            }
 
-                // Verify password
+            try {
                 const passwordHash = await hashPassword(password);
                 const storedHash = localStorage.getItem('passwordHash');
                 
@@ -993,22 +972,12 @@
                     return;
                 }
 
-                // Initialize Firebase with hardcoded config
-                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.firebaseApp);
-                window.db = getFirestore(window.firebaseApp);
-
-                // Generate encryption key
+                window.app = initializeApp(FIREBASE_CONFIG);
+                window.storage = getStorage(window.app);
+                window.db = getFirestore(window.app);
                 window.encryptionKey = await deriveKey(password);
 
-                console.log('✓ Logged in');
-
-                // Show vault
-                document.getElementById('authSection').style.display = 'none';
-                document.getElementById('vaultSection').classList.add('active');
-                document.getElementById('logoutBtn').style.display = 'block';
-                document.getElementById('changePasswordBtn').style.display = 'block';
-
+                showVault();
                 await loadPhotos();
             } catch (error) {
                 console.error('Login error:', error);
@@ -1016,182 +985,10 @@
             }
         };
 
-        // Biometric Authentication Functions
-        async function isBiometricAvailable() {
-            if (!window.PublicKeyCredential) {
-                return false;
-            }
-            
-            try {
-                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                return available;
-            } catch (error) {
-                console.log('Biometric check error:', error);
-                return false;
-            }
-        }
-
-        async function setupBiometric(password) {
-            try {
-                // Encrypt password for storage
-                const encoder = new TextEncoder();
-                const passwordData = encoder.encode(password);
-                const encryptionKey = await crypto.subtle.generateKey(
-                    { name: 'AES-GCM', length: 256 },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
-                
-                const iv = crypto.getRandomValues(new Uint8Array(12));
-                const encryptedPassword = await crypto.subtle.encrypt(
-                    { name: 'AES-GCM', iv },
-                    encryptionKey,
-                    passwordData
-                );
-
-                // Export encryption key
-                const exportedKey = await crypto.subtle.exportKey('raw', encryptionKey);
-                
-                // Create WebAuthn credential
-                const challenge = crypto.getRandomValues(new Uint8Array(32));
-                const publicKeyOptions = {
-                    challenge: challenge,
-                    rp: {
-                        name: "SecureVault",
-                        id: window.location.hostname
-                    },
-                    user: {
-                        id: crypto.getRandomValues(new Uint8Array(16)),
-                        name: "vault-user",
-                        displayName: "Vault User"
-                    },
-                    pubKeyCredParams: [
-                        { alg: -7, type: "public-key" },  // ES256
-                        { alg: -257, type: "public-key" } // RS256
-                    ],
-                    authenticatorSelection: {
-                        authenticatorAttachment: "platform",
-                        userVerification: "required"
-                    },
-                    timeout: 60000,
-                    attestation: "none"
-                };
-
-                const credential = await navigator.credentials.create({
-                    publicKey: publicKeyOptions
-                });
-
-                // Store encrypted password and key
-                const biometricData = {
-                    credentialId: arrayBufferToBase64(credential.rawId),
-                    encryptedPassword: arrayBufferToBase64(encryptedPassword),
-                    iv: arrayBufferToBase64(iv),
-                    key: arrayBufferToBase64(exportedKey)
-                };
-                
-                localStorage.setItem('biometricAuth', JSON.stringify(biometricData));
-                console.log('✓ Biometric authentication enabled');
-                
-            } catch (error) {
-                console.error('Biometric setup error:', error);
-                // Silently fail - user can still use password
-            }
-        }
-
-        async function loginWithBiometric() {
-            try {
-                const biometricDataStr = localStorage.getItem('biometricAuth');
-                if (!biometricDataStr) {
-                    throw new Error('Biometric not setup');
-                }
-
-                const biometricData = JSON.parse(biometricDataStr);
-                
-                // Authenticate with WebAuthn
-                const challenge = crypto.getRandomValues(new Uint8Array(32));
-                const publicKeyOptions = {
-                    challenge: challenge,
-                    allowCredentials: [{
-                        id: base64ToArrayBuffer(biometricData.credentialId),
-                        type: 'public-key',
-                        transports: ['internal']
-                    }],
-                    timeout: 60000,
-                    userVerification: "required"
-                };
-
-                const assertion = await navigator.credentials.get({
-                    publicKey: publicKeyOptions
-                });
-
-                if (!assertion) {
-                    throw new Error('Biometric authentication failed');
-                }
-
-                // Decrypt password
-                const key = await crypto.subtle.importKey(
-                    'raw',
-                    base64ToArrayBuffer(biometricData.key),
-                    { name: 'AES-GCM', length: 256 },
-                    false,
-                    ['decrypt']
-                );
-
-                const decryptedPasswordBuffer = await crypto.subtle.decrypt(
-                    { 
-                        name: 'AES-GCM', 
-                        iv: base64ToArrayBuffer(biometricData.iv)
-                    },
-                    key,
-                    base64ToArrayBuffer(biometricData.encryptedPassword)
-                );
-
-                const decoder = new TextDecoder();
-                const password = decoder.decode(decryptedPasswordBuffer);
-
-                // Initialize Firebase
-                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
-                window.storage = getStorage(window.firebaseApp);
-                window.db = getFirestore(window.firebaseApp);
-
-                // Generate encryption key
-                window.encryptionKey = await deriveKey(password);
-
-                console.log('✓ Logged in with biometric');
-
-                // Show vault
-                document.getElementById('authSection').style.display = 'none';
-                document.getElementById('vaultSection').classList.add('active');
-                document.getElementById('logoutBtn').style.display = 'block';
-                document.getElementById('changePasswordBtn').style.display = 'block';
-
-                await loadPhotos();
-
-            } catch (error) {
-                console.error('Biometric login error:', error);
-                alert('Biometric login failed. Please use password.');
-            }
-        }
-
-        window.loginWithBiometric = loginWithBiometric;
-
-        // Helper functions for base64 conversion
-        function arrayBufferToBase64(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary);
-        }
-
-        function base64ToArrayBuffer(base64) {
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-            return bytes.buffer;
+        function showVault() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('mainHeader').classList.remove('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
         }
 
         window.logout = function() {
@@ -1199,161 +996,6 @@
             window.photos = [];
             location.reload();
         };
-
-        window.showChangePassword = function() {
-            document.getElementById('changePasswordModal').classList.add('active');
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-        };
-
-        window.closeChangePassword = function() {
-            document.getElementById('changePasswordModal').classList.remove('active');
-        };
-
-        window.changePassword = async function() {
-            try {
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-
-                if (!currentPassword || !newPassword || !confirmPassword) {
-                    alert('Please fill in all fields');
-                    return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                    alert('New passwords do not match');
-                    return;
-                }
-
-                if (newPassword.length < 8) {
-                    alert('New password must be at least 8 characters');
-                    return;
-                }
-
-                // Verify current password
-                const currentPasswordHash = await hashPassword(currentPassword);
-                const storedHash = localStorage.getItem('passwordHash');
-                
-                if (currentPasswordHash !== storedHash) {
-                    alert('Current password is incorrect');
-                    return;
-                }
-
-                // Confirm action
-                if (!confirm(`Re-encrypt ${window.photos.length} photos with new password? This cannot be undone.`)) {
-                    return;
-                }
-
-                // Show progress
-                document.getElementById('reencryptProgress').style.display = 'block';
-                const progressText = document.getElementById('progressText');
-
-                // Generate old and new encryption keys
-                const oldKey = await deriveKey(currentPassword);
-                const newKey = await deriveKey(newPassword);
-
-                console.log('Starting re-encryption of', window.photos.length, 'photos');
-
-                // Re-encrypt all photos
-                for (let i = 0; i < window.photos.length; i++) {
-                    const photo = window.photos[i];
-                    progressText.textContent = `Re-encrypting photos... ${i + 1}/${window.photos.length}`;
-
-                    try {
-                        // Download encrypted photo
-                        const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
-                        const { ref: storageRef, uploadBytes, deleteObject } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
-                        
-                        const photoRef = storageRef(window.storage, `photos/${photo.id}.enc`);
-                        const blob = await getBlob(photoRef);
-                        const encryptedArray = new Uint8Array(await blob.arrayBuffer());
-
-                        // Decrypt with old key
-                        const decryptedData = await decryptDataWithKey(encryptedArray, oldKey);
-
-                        // Re-encrypt with new key
-                        const reencryptedData = await encryptDataWithKey(decryptedData, newKey);
-
-                        // Upload back to Firebase
-                        await uploadBytes(photoRef, reencryptedData);
-
-                        console.log(`✓ Re-encrypted ${i + 1}/${window.photos.length}:`, photo.name);
-                    } catch (error) {
-                        console.error('Error re-encrypting photo:', photo.name, error);
-                        alert(`Failed to re-encrypt ${photo.name}. Stopping process.`);
-                        document.getElementById('reencryptProgress').style.display = 'none';
-                        return;
-                    }
-                }
-
-                // Update stored password hash
-                const newPasswordHash = await hashPassword(newPassword);
-                localStorage.setItem('passwordHash', newPasswordHash);
-
-                // Update encryption key
-                window.encryptionKey = newKey;
-
-                // Update biometric if enabled
-                const biometricDataStr = localStorage.getItem('biometricAuth');
-                if (biometricDataStr) {
-                    try {
-                        await setupBiometric(newPassword);
-                        console.log('✓ Biometric updated with new password');
-                    } catch (error) {
-                        console.error('Failed to update biometric:', error);
-                        localStorage.removeItem('biometricAuth');
-                    }
-                }
-
-                console.log('✓ Password changed successfully');
-                alert('Password changed successfully! All photos have been re-encrypted.');
-                
-                document.getElementById('reencryptProgress').style.display = 'none';
-                closeChangePassword();
-
-            } catch (error) {
-                console.error('Change password error:', error);
-                alert('Failed to change password: ' + error.message);
-                document.getElementById('reencryptProgress').style.display = 'none';
-            }
-        };
-
-        // Helper function to decrypt with specific key
-        async function decryptDataWithKey(encryptedArray, key) {
-            const dataArray = encryptedArray instanceof Uint8Array 
-                ? encryptedArray 
-                : new Uint8Array(encryptedArray);
-            
-            const iv = dataArray.slice(0, 12);
-            const encryptedData = dataArray.slice(12);
-
-            const decryptedData = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv },
-                key,
-                encryptedData
-            );
-
-            return decryptedData;
-        }
-
-        // Helper function to encrypt with specific key
-        async function encryptDataWithKey(data, key) {
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            
-            const encryptedData = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv },
-                key,
-                data
-            );
-
-            const combined = new Uint8Array(iv.length + encryptedData.byteLength);
-            combined.set(iv, 0);
-            combined.set(new Uint8Array(encryptedData), iv.length);
-
-            return combined;
-        }
 
         // Encryption functions
         async function deriveKey(password) {
@@ -1369,7 +1011,7 @@
             return crypto.subtle.deriveKey(
                 {
                     name: 'PBKDF2',
-                    salt: encoder.encode('securevault-firebase-v1'),
+                    salt: encoder.encode('securevault-v2'),
                     iterations: 100000,
                     hash: 'SHA-256'
                 },
@@ -1413,18 +1055,13 @@
             const iv = dataArray.slice(0, 12);
             const encryptedData = dataArray.slice(12);
 
-            try {
-                const decryptedData = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv },
-                    window.encryptionKey,
-                    encryptedData
-                );
+            const decryptedData = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                window.encryptionKey,
+                encryptedData
+            );
 
-                return decryptedData;
-            } catch (error) {
-                console.error('Decryption failed:', error);
-                throw new Error('Decryption failed. Wrong password?');
-            }
+            return decryptedData;
         }
 
         async function createThumbnail(file) {
@@ -1466,46 +1103,51 @@
             });
         }
 
-        // File handling
-        window.setupEventListeners = function() {
+        // Setup event listeners
+        function setupEventListeners() {
             const uploadArea = document.getElementById('uploadArea');
             const fileInput = document.getElementById('fileInput');
 
-            if (uploadArea && fileInput) {
-                uploadArea.addEventListener('click', () => fileInput.click());
-                fileInput.addEventListener('change', handleFileSelect);
+            uploadArea.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
 
-                uploadArea.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('dragover');
-                });
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
 
-                uploadArea.addEventListener('dragleave', () => {
-                    uploadArea.classList.remove('dragover');
-                });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
 
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    handleFileSelect({ target: { files: e.dataTransfer.files } });
-                });
-            }
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFileSelect({ target: { files: e.dataTransfer.files } });
+            });
 
-            const modal = document.getElementById('modal');
-            if (modal) {
-                modal.addEventListener('click', (e) => {
-                    if (e.target.id === 'modal') closeModal();
-                });
-            }
-        };
+            document.getElementById('imageModal').addEventListener('click', (e) => {
+                if (e.target.id === 'imageModal') closeModal();
+            });
 
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    closeActionSheet();
+                    closeChangePassword();
+                }
+            });
+        }
+
+        // File handling
         async function handleFileSelect(e) {
             const files = Array.from(e.target.files);
-            
             if (files.length === 0) return;
 
             const uploadArea = document.getElementById('uploadArea');
-            uploadArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Encrypting and uploading...</p></div>';
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Uploading...</p></div>';
 
             for (const file of files) {
                 if (!file.type.startsWith('image/')) continue;
@@ -1517,12 +1159,10 @@
                     const photoId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                     const folder = window.currentFolder || 'All Photos';
                     
-                    // Upload encrypted file to Firebase Storage
                     const storageRef = ref(window.storage, `photos/${photoId}.enc`);
                     await uploadBytes(storageRef, encryptedData);
                     const downloadURL = await getDownloadURL(storageRef);
                     
-                    // Save metadata to Firestore
                     await setDoc(doc(window.db, 'photos', photoId), {
                         id: photoId,
                         name: file.name,
@@ -1544,20 +1184,13 @@
                         folder: folder,
                         url: downloadURL
                     });
-
-                    console.log('✓ Uploaded:', file.name);
                 } catch (error) {
                     console.error('Upload error:', error);
                     alert('Failed to upload ' + file.name);
                 }
             }
 
-            uploadArea.innerHTML = `
-                <div class="upload-icon">📤</div>
-                <div class="upload-text">Drop photos here or click to upload</div>
-                <div class="upload-subtext">Images encrypted before cloud upload</div>
-            `;
-
+            uploadArea.innerHTML = originalContent;
             e.target.value = '';
             updateFolders();
             renderPhotos();
@@ -1565,7 +1198,6 @@
 
         async function loadPhotos() {
             try {
-                console.log('Loading photos from Firebase...');
                 const querySnapshot = await getDocs(collection(window.db, 'photos'));
                 
                 window.photos = [];
@@ -1573,8 +1205,6 @@
                     window.photos.push(doc.data());
                 });
 
-                console.log('✓ Loaded', window.photos.length, 'photos');
-                
                 updateFolders();
                 renderPhotos();
                 setupEventListeners();
@@ -1598,88 +1228,73 @@
             const folderList = document.getElementById('folderList');
             const currentFolderName = document.getElementById('currentFolderName');
             
-            if (currentFolderName) {
-                currentFolderName.textContent = window.currentFolder;
-            }
+            currentFolderName.textContent = window.currentFolder;
             
-            if (folderList) {
-                folderList.innerHTML = window.folders.map(folder => {
-                    const count = folder === 'All Photos' 
-                        ? window.photos.length 
-                        : window.photos.filter(p => p.folder === folder).length;
-                    
-                    return `
-                        <div class="folder-item ${folder === window.currentFolder ? 'active' : ''}" data-folder="${folder}">
-                            ${folder === 'All Photos' ? '📂' : '📁'} ${folder}
-                            <span class="folder-count">(${count})</span>
-                        </div>
-                    `;
-                }).join('');
+            folderList.innerHTML = window.folders.map(folder => {
+                const count = folder === 'All Photos' 
+                    ? window.photos.length 
+                    : window.photos.filter(p => p.folder === folder).length;
                 
-                folderList.querySelectorAll('.folder-item').forEach(item => {
-                    item.addEventListener('click', function() {
-                        window.currentFolder = this.getAttribute('data-folder');
-                        renderFolders();
-                        renderPhotos();
-                    });
-                });
-            }
+                return `
+                    <div class="folder-chip ${folder === window.currentFolder ? 'active' : ''}" onclick="selectFolder('${folder}')">
+                        ${folder === 'All Photos' ? '📂' : '📁'} ${folder}
+                        <span class="folder-count">${count}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
+        window.selectFolder = function(folder) {
+            window.currentFolder = folder;
+            renderFolders();
+            renderPhotos();
+        };
+
         window.createNewFolder = function() {
-            const folderInput = document.createElement('div');
-            folderInput.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(26, 31, 58, 0.98);
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(100, 255, 218, 0.3);
-                border-radius: 12px;
-                padding: 2rem;
-                z-index: 10000;
-                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
-            `;
-            
-            folderInput.innerHTML = `
-                <h3 style="font-family: 'JetBrains Mono', monospace; color: var(--cyan); margin-bottom: 1rem;">Create New Folder</h3>
-                <input type="text" id="newFolderInput" placeholder="Enter folder name" style="width: 100%; padding: 0.8rem; background: rgba(10, 14, 39, 0.6); border: 1px solid rgba(168, 178, 209, 0.2); border-radius: 8px; color: var(--ice); font-size: 1rem; margin-bottom: 1rem;">
-                <div style="display: flex; gap: 0.5rem;">
-                    <button id="createFolderBtn" style="flex: 1; padding: 0.8rem; background: linear-gradient(135deg, var(--cyan), #52d4b8); border: none; border-radius: 8px; color: var(--midnight); font-family: 'JetBrains Mono', monospace; font-weight: 600; cursor: pointer;">Create</button>
-                    <button id="cancelFolderBtn" style="flex: 1; padding: 0.8rem; background: rgba(255, 107, 107, 0.2); border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 8px; color: var(--red); font-family: 'JetBrains Mono', monospace; cursor: pointer;">Cancel</button>
+            const dialog = document.createElement('div');
+            dialog.className = 'modal active';
+            dialog.innerHTML = `
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">New Folder</h2>
+                        <p class="auth-subtitle">Create a folder to organize photos</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Folder Name</label>
+                        <input type="text" class="form-input" id="newFolderInput" placeholder="Enter folder name" autofocus>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="createFolderConfirm()">Create</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove()">Cancel</button>
                 </div>
             `;
+            document.body.appendChild(dialog);
             
-            document.body.appendChild(folderInput);
+            setTimeout(() => document.getElementById('newFolderInput').focus(), 100);
             
+            document.getElementById('newFolderInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') createFolderConfirm();
+            });
+        };
+
+        window.createFolderConfirm = function() {
             const input = document.getElementById('newFolderInput');
-            input.focus();
+            const folderName = input.value.trim();
             
-            const createFolder = () => {
-                const folderName = input.value.trim();
-                if (!folderName) {
-                    alert('Please enter a folder name');
-                    return;
-                }
-                
-                if (window.folders.includes(folderName)) {
-                    alert('Folder already exists!');
-                    return;
-                }
-                
-                window.folders.push(folderName);
-                window.currentFolder = folderName;
-                document.body.removeChild(folderInput);
-                renderFolders();
-                renderPhotos();
-            };
+            if (!folderName) {
+                alert('Please enter a folder name');
+                return;
+            }
             
-            document.getElementById('createFolderBtn').onclick = createFolder;
-            document.getElementById('cancelFolderBtn').onclick = () => document.body.removeChild(folderInput);
-            input.onkeypress = (e) => {
-                if (e.key === 'Enter') createFolder();
-            };
+            if (window.folders.includes(folderName)) {
+                alert('Folder already exists!');
+                return;
+            }
+            
+            window.folders.push(folderName);
+            window.currentFolder = folderName;
+            document.querySelector('.modal.active').remove();
+            renderFolders();
+            renderPhotos();
         };
 
         function renderPhotos() {
@@ -1692,100 +1307,88 @@
             
             if (filteredPhotos.length === 0) {
                 grid.innerHTML = '';
-                emptyState.style.display = 'block';
+                emptyState.classList.remove('hidden');
                 updateStats();
                 return;
             }
 
-            emptyState.style.display = 'none';
+            emptyState.classList.add('hidden');
 
             grid.innerHTML = filteredPhotos.map((photo, index) => `
                 <div class="photo-card" style="animation-delay: ${index * 0.05}s">
-                    ${photo.thumbnail 
-                        ? `<div class="photo-img-wrapper" data-action="view" data-id="${photo.id}">
-                             <div class="photo-img-bg" style="background-image: url('${photo.thumbnail}');"></div>
-                             <img src="${photo.thumbnail}" class="photo-img-main" alt="${photo.name}">
-                           </div>`
-                        : `<div class="photo-img-placeholder" data-action="view" data-id="${photo.id}">🔐</div>`
-                    }
+                    <div class="photo-thumbnail" onclick="viewPhoto('${photo.id}')">
+                        ${photo.thumbnail 
+                            ? `<div class="photo-bg" style="background-image: url('${photo.thumbnail}');"></div>
+                               <img src="${photo.thumbnail}" class="photo-img" alt="${photo.name}">`
+                            : `<div class="photo-placeholder">🔐</div>`
+                        }
+                    </div>
                     <div class="photo-info">
                         <div class="photo-name">${photo.name}</div>
                         <div class="photo-meta">
                             <span>${formatBytes(photo.size)}</span>
-                            <button class="btn-more" data-action="toggle-menu" data-id="${photo.id}">⋯</button>
-                        </div>
-                        <div class="photo-actions" id="menu-${photo.id}" style="display: none;">
-                            <button class="btn btn-small btn-download" data-action="download" data-id="${photo.id}">Download</button>
-                            ${window.folders.length > 1 ? `<button class="btn btn-small btn-download" data-action="move" data-id="${photo.id}">Move</button>` : ''}
-                            <button class="btn btn-small btn-delete" data-action="delete" data-id="${photo.id}">Delete</button>
+                            <button class="btn-ghost btn-icon" style="padding: 0.25rem; font-size: 1.125rem;" onclick="showPhotoActions('${photo.id}')">⋯</button>
                         </div>
                     </div>
                 </div>
             `).join('');
 
-            grid.querySelectorAll('[data-action]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const action = this.getAttribute('data-action');
-                    const photoId = this.getAttribute('data-id');
-                    
-                    if (action === 'view') {
-                        viewPhoto(photoId);
-                    } else if (action === 'download') {
-                        downloadPhoto(photoId);
-                    } else if (action === 'delete') {
-                        deletePhoto(photoId);
-                    } else if (action === 'move') {
-                        movePhotoToFolder(photoId);
-                    } else if (action === 'toggle-menu') {
-                        const menu = document.getElementById('menu-' + photoId);
-                        const isVisible = menu.style.display !== 'none';
-                        
-                        document.querySelectorAll('.photo-actions').forEach(m => {
-                            m.style.display = 'none';
-                        });
-                        
-                        menu.style.display = isVisible ? 'none' : 'flex';
-                    }
-                });
-            });
-
             updateStats();
         }
 
+        window.showPhotoActions = function(photoId) {
+            window.currentPhotoId = photoId;
+            const photo = window.photos.find(p => p.id === photoId);
+            
+            const actionList = `
+                <div class="action-item" onclick="viewPhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">👁</span>
+                    View Photo
+                </div>
+                <div class="action-item" onclick="downloadPhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">⬇️</span>
+                    Download
+                </div>
+                ${window.folders.length > 1 ? `
+                    <div class="action-item" onclick="movePhotoPrompt('${photoId}'); closeActionSheet();">
+                        <span class="action-icon">📁</span>
+                        Move to Folder
+                    </div>
+                ` : ''}
+                <div class="action-item danger" onclick="deletePhoto('${photoId}'); closeActionSheet();">
+                    <span class="action-icon">🗑</span>
+                    Delete
+                </div>
+            `;
+            
+            document.getElementById('actionSheetTitle').textContent = photo.name;
+            document.getElementById('actionList').innerHTML = actionList;
+            document.getElementById('actionBackdrop').classList.add('active');
+            document.getElementById('actionSheet').classList.add('active');
+        };
+
+        window.closeActionSheet = function() {
+            document.getElementById('actionBackdrop').classList.remove('active');
+            document.getElementById('actionSheet').classList.remove('active');
+        };
+
         async function viewPhoto(photoId) {
-            const modal = document.getElementById('modal');
+            const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImg');
             
-            if (!window.encryptionKey) {
-                alert('Please login first');
-                return;
-            }
-            
-            modalImg.onload = null;
-            modalImg.onerror = null;
             modalImg.src = '';
-            
             modal.classList.add('active');
 
             try {
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                console.log('Downloading encrypted photo from Firebase...');
-                
-                // Use Firebase Storage API instead of fetch to avoid CORS
-                const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
                 const storageRef = ref(window.storage, `photos/${photoId}.enc`);
                 const blob = await getBlob(storageRef);
                 
-                console.log('Decrypting...');
                 const encryptedArray = new Uint8Array(await blob.arrayBuffer());
                 const decryptedData = await decryptData(encryptedArray);
                 
-                // Convert to base64
                 const bytes = new Uint8Array(decryptedData);
                 let binary = '';
                 const chunkSize = 0x8000;
@@ -1797,21 +1400,10 @@
                 const base64 = btoa(binary);
                 const dataUrl = `data:${photo.type};base64,${base64}`;
                 
-                modalImg.onload = () => {
-                    console.log('✓ Image displayed!');
-                };
-                
-                modalImg.onerror = () => {
-                    console.error('✗ Image load failed');
-                    alert('Failed to display image');
-                    closeModal();
-                };
-                
                 modalImg.src = dataUrl;
-                
             } catch (error) {
                 console.error('View error:', error);
-                alert('Failed to view photo: ' + error.message);
+                alert('Failed to view photo');
                 closeModal();
             }
         }
@@ -1819,17 +1411,10 @@
         window.viewPhoto = viewPhoto;
 
         async function downloadPhoto(photoId) {
-            if (!window.encryptionKey) {
-                alert('Please login first');
-                return;
-            }
-            
             try {
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                // Use Firebase Storage API instead of fetch
-                const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
                 const storageRef = ref(window.storage, `photos/${photoId}.enc`);
                 const blob = await getBlob(storageRef);
                 
@@ -1853,11 +1438,9 @@
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                
-                console.log('✓ Download complete');
             } catch (error) {
                 console.error('Download error:', error);
-                alert('Failed to download photo: ' + error.message);
+                alert('Failed to download photo');
             }
         }
 
@@ -1865,130 +1448,358 @@
 
         async function deletePhoto(photoId) {
             try {
-                console.log('Deleting photo:', photoId);
-                
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
                 
-                // Delete from Firebase Storage
                 const storageRef = ref(window.storage, `photos/${photoId}.enc`);
                 await deleteObject(storageRef);
                 
-                // Delete from Firestore
                 await deleteDoc(doc(window.db, 'photos', photoId));
                 
-                // Remove from local array
                 window.photos = window.photos.filter(p => p.id !== photoId);
                 
-                console.log('✓ Deleted');
                 updateFolders();
                 renderPhotos();
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Failed to delete photo: ' + error.message);
+                alert('Failed to delete photo');
             }
         }
 
         window.deletePhoto = deletePhoto;
 
-        async function movePhotoToFolder(photoId) {
+        window.movePhotoPrompt = async function(photoId) {
+            closeActionSheet();
+            
             const dialog = document.createElement('div');
-            dialog.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(26, 31, 58, 0.98);
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(100, 255, 218, 0.3);
-                border-radius: 12px;
-                padding: 2rem;
-                z-index: 10000;
-                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
-                min-width: 300px;
-            `;
+            dialog.className = 'modal active';
             
             const availableFolders = window.folders.filter(f => f !== 'All Photos');
             
             dialog.innerHTML = `
-                <h3 style="font-family: 'JetBrains Mono', monospace; color: var(--cyan); margin-bottom: 1rem;">Move to Folder</h3>
-                <div style="margin-bottom: 1rem;">
-                    ${availableFolders.map(folder => `
-                        <button class="folder-select-btn" data-folder="${folder}" style="display: block; width: 100%; padding: 0.8rem; margin-bottom: 0.5rem; background: rgba(45, 51, 72, 0.6); border: 1px solid rgba(168, 178, 209, 0.2); border-radius: 8px; color: var(--ice); cursor: pointer; text-align: left; font-family: 'Crimson Pro', serif;">
-                            📁 ${folder}
-                        </button>
-                    `).join('')}
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">Move to Folder</h2>
+                        <p class="auth-subtitle">Select destination folder</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                        ${availableFolders.map(folder => `
+                            <button class="btn btn-secondary" style="width: 100%; justify-content: flex-start;" onclick="movePhotoToFolder('${photoId}', '${folder}')">
+                                📁 ${folder}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-ghost" style="width: 100%;" onclick="this.closest('.modal').remove()">Cancel</button>
                 </div>
-                <button id="cancelMoveBtn" style="width: 100%; padding: 0.8rem; background: rgba(255, 107, 107, 0.2); border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 8px; color: var(--red); font-family: 'JetBrains Mono', monospace; cursor: pointer;">Cancel</button>
             `;
-            
             document.body.appendChild(dialog);
-            
-            dialog.querySelectorAll('.folder-select-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const targetFolder = this.getAttribute('data-folder');
-                    
-                    try {
-                        const photoIndex = window.photos.findIndex(p => p.id === photoId);
-                        if (photoIndex === -1) throw new Error('Photo not found');
-                        
-                        window.photos[photoIndex].folder = targetFolder;
-                        
-                        // Update in Firestore
-                        await setDoc(doc(window.db, 'photos', photoId), window.photos[photoIndex]);
-                        
-                        document.body.removeChild(dialog);
-                        updateFolders();
-                        renderPhotos();
-                        console.log('✓ Moved to', targetFolder);
-                    } catch (error) {
-                        console.error('Move error:', error);
-                        alert('Failed to move photo');
-                    }
-                });
-            });
-            
-            document.getElementById('cancelMoveBtn').onclick = () => document.body.removeChild(dialog);
-        }
+        };
 
-        window.movePhotoToFolder = movePhotoToFolder;
-
-        window.closeModal = function() {
-            const modal = document.getElementById('modal');
-            const modalImg = document.getElementById('modalImg');
-            
-            if (modal) modal.classList.remove('active');
-            if (modalImg) {
-                modalImg.onload = null;
-                modalImg.onerror = null;
-                setTimeout(() => { modalImg.src = ''; }, 300);
+        window.movePhotoToFolder = async function(photoId, folderName) {
+            try {
+                const photoIndex = window.photos.findIndex(p => p.id === photoId);
+                if (photoIndex === -1) throw new Error('Photo not found');
+                
+                window.photos[photoIndex].folder = folderName;
+                await setDoc(doc(window.db, 'photos', photoId), window.photos[photoIndex]);
+                
+                document.querySelector('.modal.active').remove();
+                updateFolders();
+                renderPhotos();
+            } catch (error) {
+                console.error('Move error:', error);
+                alert('Failed to move photo');
             }
         };
 
+        window.closeModal = function() {
+            document.getElementById('imageModal').classList.remove('active');
+            document.getElementById('modalImg').src = '';
+        };
+
         function updateStats() {
-            const photoCountEl = document.getElementById('photoCount');
-            const totalSizeEl = document.getElementById('totalSize');
-            
-            if (photoCountEl) photoCountEl.textContent = window.photos.length;
-            
+            document.getElementById('photoCount').textContent = window.photos.length;
             const totalBytes = window.photos.reduce((sum, p) => sum + p.size, 0);
-            if (totalSizeEl) totalSizeEl.textContent = formatBytes(totalBytes);
+            document.getElementById('totalSize').textContent = formatBytes(totalBytes);
         }
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 MB';
             const mb = bytes / (1024 * 1024);
-            return mb.toFixed(2) + ' MB';
+            return mb.toFixed(1) + ' MB';
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        window.enableBiometricConfirm = async function(password) {
+            await setupBiometric(password);
+            document.querySelector('.modal.active').remove();
+            finalizeVaultSetup();
+        };
+
+        window.finalizeVaultSetup = function() {
+            showVault();
+            loadPhotos();
+        };
+
+        // Biometric functions (simplified)
+        async function isBiometricAvailable() {
+            if (!window.PublicKeyCredential) return false;
+            try {
+                return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+            } catch {
+                return false;
+            }
         }
 
-        window.formatBytes = formatBytes;
-        window.formatDate = formatDate;
+        async function setupBiometric(password) {
+            try {
+                const encoder = new TextEncoder();
+                const passwordData = encoder.encode(password);
+                const encryptionKey = await crypto.subtle.generateKey(
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encryptedPassword = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv },
+                    encryptionKey,
+                    passwordData
+                );
 
+                const exportedKey = await crypto.subtle.exportKey('raw', encryptionKey);
+                
+                const challenge = crypto.getRandomValues(new Uint8Array(32));
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge,
+                        rp: { name: "SecureVault", id: window.location.hostname },
+                        user: {
+                            id: crypto.getRandomValues(new Uint8Array(16)),
+                            name: "vault-user",
+                            displayName: "Vault User"
+                        },
+                        pubKeyCredParams: [
+                            { alg: -7, type: "public-key" },
+                            { alg: -257, type: "public-key" }
+                        ],
+                        authenticatorSelection: {
+                            authenticatorAttachment: "platform",
+                            userVerification: "required"
+                        },
+                        timeout: 60000,
+                        attestation: "none"
+                    }
+                });
+
+                const biometricData = {
+                    credentialId: arrayBufferToBase64(credential.rawId),
+                    encryptedPassword: arrayBufferToBase64(encryptedPassword),
+                    iv: arrayBufferToBase64(iv),
+                    key: arrayBufferToBase64(exportedKey)
+                };
+                
+                localStorage.setItem('biometricAuth', JSON.stringify(biometricData));
+            } catch (error) {
+                console.error('Biometric setup error:', error);
+            }
+        }
+
+        window.loginWithBiometric = async function() {
+            try {
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (!biometricDataStr) throw new Error('Biometric not setup');
+
+                const biometricData = JSON.parse(biometricDataStr);
+                
+                const challenge = crypto.getRandomValues(new Uint8Array(32));
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge,
+                        allowCredentials: [{
+                            id: base64ToArrayBuffer(biometricData.credentialId),
+                            type: 'public-key',
+                            transports: ['internal']
+                        }],
+                        timeout: 60000,
+                        userVerification: "required"
+                    }
+                });
+
+                if (!assertion) throw new Error('Biometric failed');
+
+                const key = await crypto.subtle.importKey(
+                    'raw',
+                    base64ToArrayBuffer(biometricData.key),
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['decrypt']
+                );
+
+                const decryptedPasswordBuffer = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: base64ToArrayBuffer(biometricData.iv) },
+                    key,
+                    base64ToArrayBuffer(biometricData.encryptedPassword)
+                );
+
+                const decoder = new TextDecoder();
+                const password = decoder.decode(decryptedPasswordBuffer);
+
+                window.app = initializeApp(FIREBASE_CONFIG);
+                window.storage = getStorage(window.app);
+                window.db = getFirestore(window.app);
+                window.encryptionKey = await deriveKey(password);
+
+                showVault();
+                await loadPhotos();
+            } catch (error) {
+                console.error('Biometric login error:', error);
+                alert('Biometric login failed. Please use password.');
+            }
+        };
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Change password
+        window.showChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.add('active');
+        };
+
+        window.closeChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+        };
+
+        window.changePassword = async function() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters');
+                return;
+            }
+
+            const currentPasswordHash = await hashPassword(currentPassword);
+            const storedHash = localStorage.getItem('passwordHash');
+            
+            if (currentPasswordHash !== storedHash) {
+                alert('Current password is incorrect');
+                return;
+            }
+
+            // Show confirmation dialog
+            const confirmDialog = document.createElement('div');
+            confirmDialog.className = 'modal active';
+            confirmDialog.innerHTML = `
+                <div class="auth-card" style="margin: 0;">
+                    <div class="auth-header">
+                        <h2 class="auth-title">⚠️ Confirm</h2>
+                        <p class="auth-subtitle">Re-encrypt ${window.photos.length} photos with new password?</p>
+                        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">This cannot be undone.</p>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="proceedPasswordChange()">Yes, Change Password</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="this.closest('.modal').remove()">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(confirmDialog);
+            
+            // Store passwords temporarily
+            window._changePasswordData = { currentPassword, newPassword };
+        };
+
+        window.proceedPasswordChange = async function() {
+            document.querySelector('.modal.active:not(#changePasswordModal)').remove();
+            
+            const { currentPassword, newPassword } = window._changePasswordData;
+            delete window._changePasswordData;
+
+            document.getElementById('reencryptProgress').classList.remove('hidden');
+            const progressText = document.getElementById('progressText');
+
+            try {
+                const oldKey = await deriveKey(currentPassword);
+                const newKey = await deriveKey(newPassword);
+
+                for (let i = 0; i < window.photos.length; i++) {
+                    const photo = window.photos[i];
+                    progressText.textContent = `Re-encrypting... ${i + 1}/${window.photos.length}`;
+
+                    const photoRef = ref(window.storage, `photos/${photo.id}.enc`);
+                    const blob = await getBlob(photoRef);
+                    const encryptedArray = new Uint8Array(await blob.arrayBuffer());
+
+                    // Decrypt with old key
+                    const iv1 = encryptedArray.slice(0, 12);
+                    const encrypted1 = encryptedArray.slice(12);
+                    const decryptedData = await crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv: iv1 },
+                        oldKey,
+                        encrypted1
+                    );
+
+                    // Re-encrypt with new key
+                    const iv2 = crypto.getRandomValues(new Uint8Array(12));
+                    const encrypted2 = await crypto.subtle.encrypt(
+                        { name: 'AES-GCM', iv: iv2 },
+                        newKey,
+                        decryptedData
+                    );
+
+                    const reencrypted = new Uint8Array(iv2.length + encrypted2.byteLength);
+                    reencrypted.set(iv2, 0);
+                    reencrypted.set(new Uint8Array(encrypted2), iv2.length);
+
+                    await uploadBytes(photoRef, reencrypted);
+                }
+
+                const newPasswordHash = await hashPassword(newPassword);
+                localStorage.setItem('passwordHash', newPasswordHash);
+                window.encryptionKey = newKey;
+
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (biometricDataStr) {
+                    try {
+                        await setupBiometric(newPassword);
+                    } catch {
+                        localStorage.removeItem('biometricAuth');
+                    }
+                }
+
+                alert('Password changed successfully!');
+                document.getElementById('reencryptProgress').classList.add('hidden');
+                closeChangePassword();
+            } catch (error) {
+                console.error('Change password error:', error);
+                alert('Failed to change password: ' + error.message);
+                document.getElementById('reencryptProgress').classList.add('hidden');
+            }
+        };
     </script>
 </body>
 </html>
