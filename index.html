@@ -748,9 +748,13 @@
                 <input type="password" id="password" placeholder="Enter your password">
             </div>
             <button class="btn" onclick="login()">Unlock Vault</button>
+            <div id="biometricOption" style="margin-top: 1rem; display: none;">
+                <button class="btn btn-secondary" onclick="loginWithBiometric()">🔐 Use Face ID / Touch ID</button>
+            </div>
         </div>
 
         <button class="logout-btn" id="logoutBtn" style="display: none;" onclick="logout()">Logout</button>
+        <button class="logout-btn" id="changePasswordBtn" style="display: none; right: 10rem;" onclick="showChangePassword()">Change Password</button>
 
         <!-- Vault Section -->
         <div id="vaultSection" class="vault-section">
@@ -797,6 +801,34 @@
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="auth-section" style="margin: 0; animation: scaleIn 0.3s ease;">
+            <h2>Change Password</h2>
+            <p class="info-text" style="margin-bottom: 1.5rem; color: var(--amber);">
+                ⚠️ Warning: All photos will be re-encrypted with the new password. This may take a while.
+            </p>
+            <div class="form-group">
+                <label>Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter current password">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password">
+            </div>
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="confirmPassword" placeholder="Re-enter new password">
+            </div>
+            <button class="btn" onclick="changePassword()">Change Password</button>
+            <button class="btn btn-secondary" onclick="closeChangePassword()">Cancel</button>
+            <div id="reencryptProgress" style="display: none; margin-top: 1rem; text-align: center;">
+                <div class="spinner" style="margin: 1rem auto;"></div>
+                <p class="info-text" id="progressText">Re-encrypting photos... 0/0</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -829,6 +861,16 @@
         if (isFirebaseConfigured && localStorage.getItem('vaultInitialized') === 'true') {
             document.getElementById('setupSection').style.display = 'none';
             document.getElementById('authSection').style.display = 'block';
+            
+            // Check if biometric is available
+            (async () => {
+                const hasBiometric = localStorage.getItem('biometricAuth');
+                const isAvailable = await isBiometricAvailable();
+                
+                if (hasBiometric && isAvailable) {
+                    document.getElementById('biometricOption').style.display = 'block';
+                }
+            })();
         } else if (!isFirebaseConfigured) {
             document.getElementById('setupSection').style.display = 'block';
         } else {
@@ -870,6 +912,13 @@
                 const passwordHash = await hashPassword(password);
                 localStorage.setItem('passwordHash', passwordHash);
                 localStorage.setItem('vaultInitialized', 'true');
+
+                // Offer to setup biometric authentication
+                if (await isBiometricAvailable()) {
+                    if (confirm('Enable Face ID / Touch ID for faster login?')) {
+                        await setupBiometric(password);
+                    }
+                }
 
                 console.log('✓ Vault initialized');
 
@@ -958,6 +1007,7 @@
                 document.getElementById('authSection').style.display = 'none';
                 document.getElementById('vaultSection').classList.add('active');
                 document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('changePasswordBtn').style.display = 'block';
 
                 await loadPhotos();
             } catch (error) {
@@ -966,11 +1016,344 @@
             }
         };
 
+        // Biometric Authentication Functions
+        async function isBiometricAvailable() {
+            if (!window.PublicKeyCredential) {
+                return false;
+            }
+            
+            try {
+                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                return available;
+            } catch (error) {
+                console.log('Biometric check error:', error);
+                return false;
+            }
+        }
+
+        async function setupBiometric(password) {
+            try {
+                // Encrypt password for storage
+                const encoder = new TextEncoder();
+                const passwordData = encoder.encode(password);
+                const encryptionKey = await crypto.subtle.generateKey(
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encryptedPassword = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv },
+                    encryptionKey,
+                    passwordData
+                );
+
+                // Export encryption key
+                const exportedKey = await crypto.subtle.exportKey('raw', encryptionKey);
+                
+                // Create WebAuthn credential
+                const challenge = crypto.getRandomValues(new Uint8Array(32));
+                const publicKeyOptions = {
+                    challenge: challenge,
+                    rp: {
+                        name: "SecureVault",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: crypto.getRandomValues(new Uint8Array(16)),
+                        name: "vault-user",
+                        displayName: "Vault User"
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: "public-key" },  // ES256
+                        { alg: -257, type: "public-key" } // RS256
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        userVerification: "required"
+                    },
+                    timeout: 60000,
+                    attestation: "none"
+                };
+
+                const credential = await navigator.credentials.create({
+                    publicKey: publicKeyOptions
+                });
+
+                // Store encrypted password and key
+                const biometricData = {
+                    credentialId: arrayBufferToBase64(credential.rawId),
+                    encryptedPassword: arrayBufferToBase64(encryptedPassword),
+                    iv: arrayBufferToBase64(iv),
+                    key: arrayBufferToBase64(exportedKey)
+                };
+                
+                localStorage.setItem('biometricAuth', JSON.stringify(biometricData));
+                console.log('✓ Biometric authentication enabled');
+                
+            } catch (error) {
+                console.error('Biometric setup error:', error);
+                // Silently fail - user can still use password
+            }
+        }
+
+        async function loginWithBiometric() {
+            try {
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (!biometricDataStr) {
+                    throw new Error('Biometric not setup');
+                }
+
+                const biometricData = JSON.parse(biometricDataStr);
+                
+                // Authenticate with WebAuthn
+                const challenge = crypto.getRandomValues(new Uint8Array(32));
+                const publicKeyOptions = {
+                    challenge: challenge,
+                    allowCredentials: [{
+                        id: base64ToArrayBuffer(biometricData.credentialId),
+                        type: 'public-key',
+                        transports: ['internal']
+                    }],
+                    timeout: 60000,
+                    userVerification: "required"
+                };
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyOptions
+                });
+
+                if (!assertion) {
+                    throw new Error('Biometric authentication failed');
+                }
+
+                // Decrypt password
+                const key = await crypto.subtle.importKey(
+                    'raw',
+                    base64ToArrayBuffer(biometricData.key),
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['decrypt']
+                );
+
+                const decryptedPasswordBuffer = await crypto.subtle.decrypt(
+                    { 
+                        name: 'AES-GCM', 
+                        iv: base64ToArrayBuffer(biometricData.iv)
+                    },
+                    key,
+                    base64ToArrayBuffer(biometricData.encryptedPassword)
+                );
+
+                const decoder = new TextDecoder();
+                const password = decoder.decode(decryptedPasswordBuffer);
+
+                // Initialize Firebase
+                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
+                window.storage = getStorage(window.firebaseApp);
+                window.db = getFirestore(window.firebaseApp);
+
+                // Generate encryption key
+                window.encryptionKey = await deriveKey(password);
+
+                console.log('✓ Logged in with biometric');
+
+                // Show vault
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('vaultSection').classList.add('active');
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('changePasswordBtn').style.display = 'block';
+
+                await loadPhotos();
+
+            } catch (error) {
+                console.error('Biometric login error:', error);
+                alert('Biometric login failed. Please use password.');
+            }
+        }
+
+        window.loginWithBiometric = loginWithBiometric;
+
+        // Helper functions for base64 conversion
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
         window.logout = function() {
             window.encryptionKey = null;
             window.photos = [];
             location.reload();
         };
+
+        window.showChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.add('active');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        };
+
+        window.closeChangePassword = function() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+        };
+
+        window.changePassword = async function() {
+            try {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    alert('New passwords do not match');
+                    return;
+                }
+
+                if (newPassword.length < 8) {
+                    alert('New password must be at least 8 characters');
+                    return;
+                }
+
+                // Verify current password
+                const currentPasswordHash = await hashPassword(currentPassword);
+                const storedHash = localStorage.getItem('passwordHash');
+                
+                if (currentPasswordHash !== storedHash) {
+                    alert('Current password is incorrect');
+                    return;
+                }
+
+                // Confirm action
+                if (!confirm(`Re-encrypt ${window.photos.length} photos with new password? This cannot be undone.`)) {
+                    return;
+                }
+
+                // Show progress
+                document.getElementById('reencryptProgress').style.display = 'block';
+                const progressText = document.getElementById('progressText');
+
+                // Generate old and new encryption keys
+                const oldKey = await deriveKey(currentPassword);
+                const newKey = await deriveKey(newPassword);
+
+                console.log('Starting re-encryption of', window.photos.length, 'photos');
+
+                // Re-encrypt all photos
+                for (let i = 0; i < window.photos.length; i++) {
+                    const photo = window.photos[i];
+                    progressText.textContent = `Re-encrypting photos... ${i + 1}/${window.photos.length}`;
+
+                    try {
+                        // Download encrypted photo
+                        const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+                        const { ref: storageRef, uploadBytes, deleteObject } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+                        
+                        const photoRef = storageRef(window.storage, `photos/${photo.id}.enc`);
+                        const blob = await getBlob(photoRef);
+                        const encryptedArray = new Uint8Array(await blob.arrayBuffer());
+
+                        // Decrypt with old key
+                        const decryptedData = await decryptDataWithKey(encryptedArray, oldKey);
+
+                        // Re-encrypt with new key
+                        const reencryptedData = await encryptDataWithKey(decryptedData, newKey);
+
+                        // Upload back to Firebase
+                        await uploadBytes(photoRef, reencryptedData);
+
+                        console.log(`✓ Re-encrypted ${i + 1}/${window.photos.length}:`, photo.name);
+                    } catch (error) {
+                        console.error('Error re-encrypting photo:', photo.name, error);
+                        alert(`Failed to re-encrypt ${photo.name}. Stopping process.`);
+                        document.getElementById('reencryptProgress').style.display = 'none';
+                        return;
+                    }
+                }
+
+                // Update stored password hash
+                const newPasswordHash = await hashPassword(newPassword);
+                localStorage.setItem('passwordHash', newPasswordHash);
+
+                // Update encryption key
+                window.encryptionKey = newKey;
+
+                // Update biometric if enabled
+                const biometricDataStr = localStorage.getItem('biometricAuth');
+                if (biometricDataStr) {
+                    try {
+                        await setupBiometric(newPassword);
+                        console.log('✓ Biometric updated with new password');
+                    } catch (error) {
+                        console.error('Failed to update biometric:', error);
+                        localStorage.removeItem('biometricAuth');
+                    }
+                }
+
+                console.log('✓ Password changed successfully');
+                alert('Password changed successfully! All photos have been re-encrypted.');
+                
+                document.getElementById('reencryptProgress').style.display = 'none';
+                closeChangePassword();
+
+            } catch (error) {
+                console.error('Change password error:', error);
+                alert('Failed to change password: ' + error.message);
+                document.getElementById('reencryptProgress').style.display = 'none';
+            }
+        };
+
+        // Helper function to decrypt with specific key
+        async function decryptDataWithKey(encryptedArray, key) {
+            const dataArray = encryptedArray instanceof Uint8Array 
+                ? encryptedArray 
+                : new Uint8Array(encryptedArray);
+            
+            const iv = dataArray.slice(0, 12);
+            const encryptedData = dataArray.slice(12);
+
+            const decryptedData = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                encryptedData
+            );
+
+            return decryptedData;
+        }
+
+        // Helper function to encrypt with specific key
+        async function encryptDataWithKey(data, key) {
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            
+            const encryptedData = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                data
+            );
+
+            const combined = new Uint8Array(iv.length + encryptedData.byteLength);
+            combined.set(iv, 0);
+            combined.set(new Uint8Array(encryptedData), iv.length);
+
+            return combined;
+        }
 
         // Encryption functions
         async function deriveKey(password) {
