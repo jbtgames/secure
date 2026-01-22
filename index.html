@@ -1321,14 +1321,15 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                console.log('Fetching encrypted photo from Firebase...');
+                console.log('Downloading encrypted photo from Firebase...');
                 
-                // Fetch encrypted data from Firebase
-                const response = await fetch(photo.url);
-                const encryptedBlob = await response.blob();
-                const encryptedArray = new Uint8Array(await encryptedBlob.arrayBuffer());
+                // Use Firebase Storage API instead of fetch to avoid CORS
+                const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+                const storageRef = ref(window.storage, `photos/${photoId}.enc`);
+                const blob = await getBlob(storageRef);
                 
                 console.log('Decrypting...');
+                const encryptedArray = new Uint8Array(await blob.arrayBuffer());
                 const decryptedData = await decryptData(encryptedArray);
                 
                 // Convert to base64
@@ -1374,10 +1375,12 @@
                 const photo = window.photos.find(p => p.id === photoId);
                 if (!photo) throw new Error('Photo not found');
 
-                const response = await fetch(photo.url);
-                const encryptedBlob = await response.blob();
-                const encryptedArray = new Uint8Array(await encryptedBlob.arrayBuffer());
+                // Use Firebase Storage API instead of fetch
+                const { getBlob } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+                const storageRef = ref(window.storage, `photos/${photoId}.enc`);
+                const blob = await getBlob(storageRef);
                 
+                const encryptedArray = new Uint8Array(await blob.arrayBuffer());
                 const decryptedData = await decryptData(encryptedArray);
                 
                 const bytes = new Uint8Array(decryptedData);
