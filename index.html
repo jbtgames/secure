@@ -803,6 +803,16 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+        // Firebase Configuration - Add your config here
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDU04h1-gksIzEmKzUlGsni_xYWWrxZp3g",
+            authDomain: "vault-4b8d7.firebaseapp.com",
+            projectId: "vault-4b8d7",
+            storageBucket: "vault-4b8d7.firebasestorage.app",
+            messagingSenderId: "685240750649",
+            appId: "1:685240750649:web:bfebdef7b84f4bd6dc73e8"
+        };
+
         // Global state
         window.firebaseApp = null;
         window.storage = null;
@@ -812,7 +822,70 @@
         window.currentFolder = 'All Photos';
         window.folders = ['All Photos'];
 
-        // Initialize Firebase
+        // Check if Firebase is configured
+        const isFirebaseConfigured = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+
+        // Initialize Firebase on page load if configured
+        if (isFirebaseConfigured && localStorage.getItem('vaultInitialized') === 'true') {
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'block';
+        } else if (!isFirebaseConfigured) {
+            document.getElementById('setupSection').style.display = 'block';
+        } else {
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'none';
+            
+            // Show simple password setup
+            const setupSection = document.getElementById('setupSection');
+            setupSection.style.display = 'block';
+            setupSection.innerHTML = `
+                <h2>Setup Your Vault</h2>
+                <div class="form-group">
+                    <label>Encryption Password</label>
+                    <input type="password" id="setupPassword" placeholder="Enter secure password">
+                </div>
+                <button class="btn" onclick="initializeWithPassword()">Initialize Vault</button>
+                <p class="info-text">Your password encrypts all photos. Never forget it!</p>
+            `;
+        }
+
+        window.initializeWithPassword = async function() {
+            try {
+                const password = document.getElementById('setupPassword').value;
+
+                if (!password) {
+                    alert('Please enter a password');
+                    return;
+                }
+
+                // Initialize Firebase
+                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
+                window.storage = getStorage(window.firebaseApp);
+                window.db = getFirestore(window.firebaseApp);
+
+                // Generate encryption key
+                window.encryptionKey = await deriveKey(password);
+
+                // Store password hash
+                const passwordHash = await hashPassword(password);
+                localStorage.setItem('passwordHash', passwordHash);
+                localStorage.setItem('vaultInitialized', 'true');
+
+                console.log('✓ Vault initialized');
+
+                // Show vault
+                document.getElementById('setupSection').style.display = 'none';
+                document.getElementById('vaultSection').classList.add('active');
+                document.getElementById('logoutBtn').style.display = 'block';
+
+                await loadPhotos();
+            } catch (error) {
+                console.error('Setup error:', error);
+                alert('Setup failed: ' + error.message);
+            }
+        };
+
+        // Old initializeFirebase for backwards compatibility
         window.initializeFirebase = async function() {
             try {
                 const configText = document.getElementById('firebaseConfig').value.trim();
@@ -871,11 +944,8 @@
                     return;
                 }
 
-                // Initialize Firebase
-                const configText = localStorage.getItem('firebaseConfig');
-                const config = JSON.parse(configText);
-                
-                window.firebaseApp = initializeApp(config);
+                // Initialize Firebase with hardcoded config
+                window.firebaseApp = initializeApp(FIREBASE_CONFIG);
                 window.storage = getStorage(window.firebaseApp);
                 window.db = getFirestore(window.firebaseApp);
 
@@ -1536,11 +1606,6 @@
         window.formatBytes = formatBytes;
         window.formatDate = formatDate;
 
-        // Check if already initialized
-        if (localStorage.getItem('vaultInitialized') === 'true') {
-            document.getElementById('setupSection').style.display = 'none';
-            document.getElementById('authSection').style.display = 'block';
-        }
     </script>
 </body>
 </html>
