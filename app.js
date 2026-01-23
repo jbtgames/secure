@@ -442,7 +442,7 @@ window.selectFolder = function(folder) {
     window.currentFolder = folder;
     window.displayedCount = window.displayLimit; // Reset pagination
     renderFolders();
-    renderPhotos();
+    renderPhotos(true); // Reset render
 };
 
 window.createNewFolder = function() {
@@ -1837,7 +1837,7 @@ function renderFolders() {
     }).join('');
 }
 
-function renderPhotos() {
+function renderPhotos(reset = true) {
     const grid = document.getElementById('photoGrid');
     const emptyState = document.getElementById('emptyState');
 
@@ -1859,8 +1859,13 @@ function renderPhotos() {
 
     emptyState.classList.add('hidden');
 
+    // Store current scroll position
+    const scrollPos = window.scrollY;
+
     // Reset displayed count when folder changes
-    window.displayedCount = Math.min(window.displayLimit, filteredPhotos.length);
+    if (reset) {
+        window.displayedCount = Math.min(window.displayLimit, filteredPhotos.length);
+    }
 
     // Cache thumbnails to prevent reloading
     filteredPhotos.forEach(photo => {
@@ -1872,18 +1877,19 @@ function renderPhotos() {
     // Only render displayed photos for better performance
     const photosToDisplay = filteredPhotos.slice(0, window.displayedCount);
 
-    grid.innerHTML = photosToDisplay.map((photo, index) => {
+    // Build HTML string
+    const photosHTML = photosToDisplay.map((photo, index) => {
         const cachedThumbnail = window.thumbnailCache.get(photo.id) || photo.thumbnail;
 
         return `
-        <div class="photo-card" style="animation-delay: ${Math.min(index * 0.02, 1)}s">
+        <div class="photo-card" style="animation: fadeInUp 0.3s ease ${Math.min(index * 0.01, 0.3)}s both">
             <div class="photo-thumbnail" onclick="viewPhoto('${escapeHTML(photo.id)}')">
                 ${cachedThumbnail
                     ? `<div class="photo-bg" style="background-image: url('${escapeHTML(cachedThumbnail)}');"></div>
-                       <img src="${escapeHTML(cachedThumbnail)}" class="photo-img lazy-img" alt="${escapeHTML(photo.name)}" loading="lazy">`
+                       <img src="${escapeHTML(cachedThumbnail)}" class="photo-img" alt="${escapeHTML(photo.name)}" loading="lazy">`
                     : `<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 3rem;">🔐</div>`
                 }
-                <button class="photo-favorite-btn ${photo.favorite ? 'favorited' : ''}" onclick="toggleFavorite('${escapeHTML(photo.id)}', event)">
+                <button class="photo-favorite-btn ${photo.favorite ? 'favorited' : ''}" onclick="event.stopPropagation(); toggleFavorite('${escapeHTML(photo.id)}', event)">
                     ${photo.favorite ? '⭐' : '☆'}
                 </button>
             </div>
@@ -1897,18 +1903,23 @@ function renderPhotos() {
         </div>
     `}).join('');
 
+    grid.innerHTML = photosHTML;
+
     // Add infinite scroll sentinel if there are more photos
     if (window.displayedCount < filteredPhotos.length) {
         const sentinel = document.createElement('div');
         sentinel.className = 'infinite-scroll-sentinel';
         sentinel.id = 'infiniteScrollSentinel';
-        sentinel.style.height = '1px';
         grid.appendChild(sentinel);
+
+        // Initialize infinite scroll observer
+        initializeInfiniteScroll();
     }
 
-    // Initialize observers
-    initializeLazyLoading();
-    initializeInfiniteScroll();
+    // Restore scroll position if not resetting
+    if (!reset && scrollPos > 0) {
+        window.scrollTo(0, scrollPos);
+    }
 
     updateStats();
 }
@@ -1947,37 +1958,15 @@ window.loadMorePhotos = function() {
         filteredPhotos = window.photos.filter(p => p.folder === window.currentFolder);
     }
 
+    const oldCount = window.displayedCount;
     window.displayedCount = Math.min(window.displayedCount + 30, filteredPhotos.length);
-    renderPhotos();
+
+    // Only re-render if we actually added more
+    if (window.displayedCount > oldCount) {
+        renderPhotos(false); // Don't reset, preserve scroll
+    }
 };
 
-function initializeLazyLoading() {
-    // Disconnect existing observer
-    if (window.lazyLoadObserver) {
-        window.lazyLoadObserver.disconnect();
-    }
-
-    // Create intersection observer for lazy loading
-    window.lazyLoadObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                if (img.dataset.src) {
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                }
-                window.lazyLoadObserver.unobserve(img);
-            }
-        });
-    }, {
-        rootMargin: '50px' // Start loading 50px before image enters viewport
-    });
-
-    // Observe all lazy images
-    document.querySelectorAll('.lazy-img').forEach(img => {
-        window.lazyLoadObserver.observe(img);
-    });
-}
 
 function updateStats() {
     document.getElementById('photoCount').textContent = window.photos.length;
