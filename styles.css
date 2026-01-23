@@ -458,43 +458,38 @@ body {
 /* Photo Grid */
 .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
     margin-bottom: 2rem;
+    padding: 0 0.5rem;
 }
 
 @media (min-width: 640px) {
     .photo-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        padding: 0;
     }
 }
 
 .photo-card {
     background: var(--bg-elevated);
-    border-radius: 16px;
-    overflow: visible; /* Changed to visible to show favorite button */
+    border-radius: 12px;
+    overflow: hidden;
     border: 1px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
     position: relative;
 }
 
-.photo-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-    border-color: var(--text-muted);
-}
-
 .photo-card:active {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: scale(0.98);
 }
 
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(10px);
     }
     to {
         opacity: 1;
@@ -508,7 +503,7 @@ body {
     overflow: hidden;
     cursor: pointer;
     background: var(--bg-tertiary);
-    border-radius: 0.75rem;
+    border-radius: 0;
 }
 
 .photo-bg {
@@ -516,7 +511,7 @@ body {
     inset: 0;
     background-size: cover;
     background-position: center;
-    filter: blur(20px) brightness(0.9);
+    filter: blur(15px) brightness(0.9);
     transform: scale(1.1);
 }
 
@@ -526,46 +521,44 @@ body {
     height: 100%;
     object-fit: contain;
     z-index: 1;
+    display: block;
 }
 
 .photo-favorite-btn {
     position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
+    top: 0.5rem;
+    right: 0.5rem;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    width: 28px;
-    height: 28px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.875rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    font-size: 1.125rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    padding: 0;
+    touch-action: manipulation;
 }
 
 [data-theme="dark"] .photo-favorite-btn {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-.photo-favorite-btn:hover {
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .photo-favorite-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 
 .photo-favorite-btn.favorited {
-    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-    border-color: rgba(255, 215, 0, 0.5);
+    background: #ffd700;
     animation: heartBeat 0.3s ease;
 }
 
@@ -576,24 +569,25 @@ body {
 }
 
 .photo-info {
-    padding: 0.75rem;
+    padding: 0.625rem 0.75rem;
 }
 
 .photo-name {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 0.25rem;
+    line-height: 1.3;
 }
 
 .photo-meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--text-secondary);
 }
 
@@ -1489,48 +1483,24 @@ body {
 
 /* ==================== PERFORMANCE OPTIMIZATIONS ==================== */
 
-/* Photo card performance */
-.photo-card {
-    /* Removed contain property as it clips favorite button */
-    will-change: transform;
-}
-
-.photo-thumbnail {
-    min-height: 200px; /* Prevent layout shifts */
-}
-
+/* Performance optimizations */
 .photo-img {
-    image-rendering: auto;
     transform: translateZ(0);
     backface-visibility: hidden;
 }
 
 .photo-bg {
     transform: translateZ(0);
-    will-change: transform;
 }
 
 /* Infinite scroll sentinel */
 .infinite-scroll-sentinel {
     grid-column: 1 / -1;
-    height: 1px;
-    margin: 2rem 0;
+    height: 20px;
+    margin: 1rem 0;
+    pointer-events: none;
 }
 
-/* Lazy loading placeholder */
-.lazy-img {
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.lazy-img[src] {
-    opacity: 1;
-}
-
-/* Optimize grid rendering */
-.photo-grid {
-    contain: layout;
-}
 
 /* Reduce animation on large lists */
 @media (prefers-reduced-motion: reduce) {
