@@ -1474,3 +1474,69 @@ body {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* ==================== PERFORMANCE OPTIMIZATIONS ==================== */
+
+/* Photo card performance */
+.photo-card {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.photo-thumbnail {
+    min-height: 200px; /* Prevent layout shifts */
+}
+
+.photo-img {
+    image-rendering: auto;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.photo-bg {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Load More button */
+.load-more-container {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.load-more-btn {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    min-width: 200px;
+}
+
+/* Lazy loading placeholder */
+.lazy-img {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.lazy-img[src] {
+    opacity: 1;
+}
+
+/* Optimize grid rendering */
+.photo-grid {
+    contain: layout;
+}
+
+/* Reduce animation on large lists */
+@media (prefers-reduced-motion: reduce) {
+    .photo-card {
+        animation: none !important;
+    }
+}
+
+/* Optimize scrolling performance */
+.main-content {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+}

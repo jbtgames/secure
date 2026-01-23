@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User documents - anyone can create, but only read/update their own
+    match /users/{userId} {
+      allow read, write: if true;
+
+      // Photos subcollection
+      match /photos/{photoId} {
+        allow read, write: if true;
+      }
+
+      // Notes subcollection
+      match /notes/{noteId} {
+        allow read, write: if true;
+      }
+
+      // Files subcollection
+      match /files/{fileId} {
+        allow read, write: if true;
+      }
+    }
+  }
+}

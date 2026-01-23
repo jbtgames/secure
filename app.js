@@ -40,6 +40,7 @@ window.photos = [];
 window.notes = [];
 window.files = [];
 window.imageCache = new Map(); // Cache decrypted images to avoid re-downloading
+window.thumbnailCache = new Map(); // Cache thumbnail data URLs
 window.currentFolder = 'All Photos';
 window.folders = ['All Photos', 'Favorites'];
 window.currentPhotoId = null;
@@ -48,12 +49,31 @@ window.currentUsername = null;
 window.currentPhotoIndex = 0;
 window.currentPhotoList = [];
 window.currentTab = 'photos';
+window.lazyLoadObserver = null;
+window.displayLimit = 30; // Initial number of photos to display
+window.displayedCount = 30;
 
 // ==================== SECURITY HELPERS ====================
 function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// Memory management - clear full-size image cache if it gets too large
+function manageImageCache() {
+    const MAX_CACHE_SIZE = 20; // Keep only 20 full-size images in memory
+
+    if (window.imageCache.size > MAX_CACHE_SIZE) {
+        // Convert to array and keep only the most recent entries
+        const entries = Array.from(window.imageCache.entries());
+        const toKeep = entries.slice(-MAX_CACHE_SIZE);
+
+        window.imageCache.clear();
+        toKeep.forEach(([key, value]) => {
+            window.imageCache.set(key, value);
+        });
+    }
 }
 
 // Rate limiting for login attempts
@@ -367,7 +387,16 @@ window.logout = function() {
     if (confirm('Are you sure you want to logout?')) {
         window.encryptionKey = null;
         window.photos = [];
+        window.notes = [];
+        window.files = [];
         window.imageCache.clear();
+        window.thumbnailCache.clear();
+
+        // Disconnect lazy load observer
+        if (window.lazyLoadObserver) {
+            window.lazyLoadObserver.disconnect();
+        }
+
         location.reload();
     }
 };
@@ -407,6 +436,7 @@ window.toggleFavorite = async function(photoId, event) {
 // ==================== FOLDERS ====================
 window.selectFolder = function(folder) {
     window.currentFolder = folder;
+    window.displayedCount = window.displayLimit; // Reset pagination
     renderFolders();
     renderPhotos();
 };
@@ -1351,6 +1381,9 @@ async function viewPhoto(photoId) {
         // Cache the decrypted image
         window.imageCache.set(photo.id, dataUrl);
 
+        // Manage cache size to prevent memory issues
+        manageImageCache();
+
         modalImg.onload = () => {
             modalSpinner.classList.add('hidden');
             modalImg.classList.add('loaded');
@@ -1803,7 +1836,7 @@ function renderFolders() {
 function renderPhotos() {
     const grid = document.getElementById('photoGrid');
     const emptyState = document.getElementById('emptyState');
-    
+
     let filteredPhotos;
     if (window.currentFolder === 'Favorites') {
         filteredPhotos = window.photos.filter(p => p.favorite);
@@ -1812,7 +1845,7 @@ function renderPhotos() {
     } else {
         filteredPhotos = window.photos.filter(p => p.folder === window.currentFolder);
     }
-    
+
     if (filteredPhotos.length === 0) {
         grid.innerHTML = '';
         emptyState.classList.remove('hidden');
@@ -1822,12 +1855,28 @@ function renderPhotos() {
 
     emptyState.classList.add('hidden');
 
-    grid.innerHTML = filteredPhotos.map((photo, index) => `
-        <div class="photo-card" style="animation-delay: ${index * 0.05}s">
+    // Reset displayed count when folder changes
+    window.displayedCount = Math.min(window.displayLimit, filteredPhotos.length);
+
+    // Cache thumbnails to prevent reloading
+    filteredPhotos.forEach(photo => {
+        if (photo.thumbnail && !window.thumbnailCache.has(photo.id)) {
+            window.thumbnailCache.set(photo.id, photo.thumbnail);
+        }
+    });
+
+    // Only render displayed photos for better performance
+    const photosToDisplay = filteredPhotos.slice(0, window.displayedCount);
+
+    grid.innerHTML = photosToDisplay.map((photo, index) => {
+        const cachedThumbnail = window.thumbnailCache.get(photo.id) || photo.thumbnail;
+
+        return `
+        <div class="photo-card" style="animation-delay: ${Math.min(index * 0.02, 1)}s">
             <div class="photo-thumbnail" onclick="viewPhoto('${escapeHTML(photo.id)}')">
-                ${photo.thumbnail
-                    ? `<div class="photo-bg" style="background-image: url('${escapeHTML(photo.thumbnail)}');"></div>
-                       <img src="${escapeHTML(photo.thumbnail)}" class="photo-img" alt="${escapeHTML(photo.name)}">`
+                ${cachedThumbnail
+                    ? `<div class="photo-bg" style="background-image: url('${escapeHTML(cachedThumbnail)}');"></div>
+                       <img src="${escapeHTML(cachedThumbnail)}" class="photo-img lazy-img" alt="${escapeHTML(photo.name)}" loading="lazy">`
                     : `<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 3rem;">🔐</div>`
                 }
                 <button class="photo-favorite-btn ${photo.favorite ? 'favorited' : ''}" onclick="toggleFavorite('${escapeHTML(photo.id)}', event)">
@@ -1842,9 +1891,66 @@ function renderPhotos() {
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
+
+    // Add "Load More" button if there are more photos
+    if (window.displayedCount < filteredPhotos.length) {
+        const loadMoreBtn = document.createElement('div');
+        loadMoreBtn.className = 'load-more-container';
+        loadMoreBtn.innerHTML = `
+            <button class="btn btn-secondary load-more-btn" onclick="loadMorePhotos()">
+                Load More (${filteredPhotos.length - window.displayedCount} remaining)
+            </button>
+        `;
+        grid.appendChild(loadMoreBtn);
+    }
+
+    // Initialize lazy loading observer
+    initializeLazyLoading();
 
     updateStats();
+}
+
+window.loadMorePhotos = function() {
+    let filteredPhotos;
+    if (window.currentFolder === 'Favorites') {
+        filteredPhotos = window.photos.filter(p => p.favorite);
+    } else if (window.currentFolder === 'All Photos') {
+        filteredPhotos = window.photos;
+    } else {
+        filteredPhotos = window.photos.filter(p => p.folder === window.currentFolder);
+    }
+
+    window.displayedCount = Math.min(window.displayedCount + 30, filteredPhotos.length);
+    renderPhotos();
+};
+
+function initializeLazyLoading() {
+    // Disconnect existing observer
+    if (window.lazyLoadObserver) {
+        window.lazyLoadObserver.disconnect();
+    }
+
+    // Create intersection observer for lazy loading
+    window.lazyLoadObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                }
+                window.lazyLoadObserver.unobserve(img);
+            }
+        });
+    }, {
+        rootMargin: '50px' // Start loading 50px before image enters viewport
+    });
+
+    // Observe all lazy images
+    document.querySelectorAll('.lazy-img').forEach(img => {
+        window.lazyLoadObserver.observe(img);
+    });
 }
 
 function updateStats() {
@@ -1943,7 +2049,7 @@ async function createThumbnail(file) {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const maxSize = 200;
+                const maxSize = 150; // Reduced from 200 for better performance
                 let width = img.width;
                 let height = img.height;
 
@@ -1961,9 +2067,16 @@ async function createThumbnail(file) {
 
                 canvas.width = width;
                 canvas.height = height;
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for better performance
+
+                // Use better image smoothing
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'medium';
+
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+
+                // Reduce quality for smaller file size (0.6 instead of 0.7)
+                resolve(canvas.toDataURL('image/jpeg', 0.6));
             };
             img.onerror = reject;
             img.src = e.target.result;
