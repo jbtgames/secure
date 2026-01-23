@@ -50,6 +50,7 @@ window.currentPhotoIndex = 0;
 window.currentPhotoList = [];
 window.currentTab = 'photos';
 window.lazyLoadObserver = null;
+window.infiniteScrollObserver = null;
 window.displayLimit = 30; // Initial number of photos to display
 window.displayedCount = 30;
 
@@ -392,9 +393,12 @@ window.logout = function() {
         window.imageCache.clear();
         window.thumbnailCache.clear();
 
-        // Disconnect lazy load observer
+        // Disconnect observers
         if (window.lazyLoadObserver) {
             window.lazyLoadObserver.disconnect();
+        }
+        if (window.infiniteScrollObserver) {
+            window.infiniteScrollObserver.disconnect();
         }
 
         location.reload();
@@ -1893,24 +1897,44 @@ function renderPhotos() {
         </div>
     `}).join('');
 
-    // Add "Load More" button if there are more photos
+    // Add infinite scroll sentinel if there are more photos
     if (window.displayedCount < filteredPhotos.length) {
-        const loadMoreContainer = document.createElement('div');
-        loadMoreContainer.className = 'load-more-container';
-
-        const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'btn btn-secondary load-more-btn';
-        loadMoreBtn.textContent = `Load More (${filteredPhotos.length - window.displayedCount} remaining)`;
-        loadMoreBtn.addEventListener('click', window.loadMorePhotos);
-
-        loadMoreContainer.appendChild(loadMoreBtn);
-        grid.appendChild(loadMoreContainer);
+        const sentinel = document.createElement('div');
+        sentinel.className = 'infinite-scroll-sentinel';
+        sentinel.id = 'infiniteScrollSentinel';
+        sentinel.style.height = '1px';
+        grid.appendChild(sentinel);
     }
 
-    // Initialize lazy loading observer
+    // Initialize observers
     initializeLazyLoading();
+    initializeInfiniteScroll();
 
     updateStats();
+}
+
+function initializeInfiniteScroll() {
+    // Disconnect existing observer
+    if (window.infiniteScrollObserver) {
+        window.infiniteScrollObserver.disconnect();
+    }
+
+    const sentinel = document.getElementById('infiniteScrollSentinel');
+    if (!sentinel) return;
+
+    // Create intersection observer for infinite scroll
+    window.infiniteScrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                // User scrolled to bottom, load more photos
+                window.loadMorePhotos();
+            }
+        });
+    }, {
+        rootMargin: '200px' // Start loading 200px before reaching bottom
+    });
+
+    window.infiniteScrollObserver.observe(sentinel);
 }
 
 window.loadMorePhotos = function() {
