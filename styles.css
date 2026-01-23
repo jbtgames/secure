@@ -472,7 +472,7 @@ body {
 .photo-card {
     background: var(--bg-elevated);
     border-radius: 16px;
-    overflow: hidden;
+    overflow: visible; /* Changed to visible to show favorite button */
     border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -508,6 +508,7 @@ body {
     overflow: hidden;
     cursor: pointer;
     background: var(--bg-tertiary);
+    border-radius: 0.75rem;
 }
 
 .photo-bg {
@@ -1479,7 +1480,7 @@ body {
 
 /* Photo card performance */
 .photo-card {
-    contain: layout style paint;
+    /* Removed contain property as it clips favorite button */
     will-change: transform;
 }
 
