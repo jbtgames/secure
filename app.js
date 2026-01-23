@@ -1895,14 +1895,16 @@ function renderPhotos() {
 
     // Add "Load More" button if there are more photos
     if (window.displayedCount < filteredPhotos.length) {
-        const loadMoreBtn = document.createElement('div');
-        loadMoreBtn.className = 'load-more-container';
-        loadMoreBtn.innerHTML = `
-            <button class="btn btn-secondary load-more-btn" onclick="loadMorePhotos()">
-                Load More (${filteredPhotos.length - window.displayedCount} remaining)
-            </button>
-        `;
-        grid.appendChild(loadMoreBtn);
+        const loadMoreContainer = document.createElement('div');
+        loadMoreContainer.className = 'load-more-container';
+
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'btn btn-secondary load-more-btn';
+        loadMoreBtn.textContent = `Load More (${filteredPhotos.length - window.displayedCount} remaining)`;
+        loadMoreBtn.addEventListener('click', window.loadMorePhotos);
+
+        loadMoreContainer.appendChild(loadMoreBtn);
+        grid.appendChild(loadMoreContainer);
     }
 
     // Initialize lazy loading observer
